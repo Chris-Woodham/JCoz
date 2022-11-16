@@ -33,6 +33,7 @@ import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
+import javax.management.ObjectName;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -96,9 +97,17 @@ public class JCozServiceImpl implements JCozServiceInterface {
                     JMXConnector connector = JMXConnectorFactory.connect(url);
                     MBeanServerConnection mbeanConn = connector
                         .getMBeanServerConnection();
+                    System.out.println("---- JCozServiceImpl ---- MBean count - before call to JMX.newMBeanProxy: " + mbeanConn.getMBeanCount());
+                    JCozProfiler.registerProfilerWithMBeanServer();
                     attachedVMs.put(localProcessId, JMX.newMXBeanProxy(mbeanConn,
                                 JCozProfiler.getMBeanName(),
                                 JCozProfilerMBean.class));
+                    System.out.println("---- JCozServiceImpl ---- MBean count - after call to JMX.newMBeanProxy: " + mbeanConn.getMBeanCount());
+                    System.out.println("---- JCozServiceImpl ---- List of available MBeans: ");
+                    Set<ObjectName> objectNames = mbeanConn.queryNames(null, null);
+                    for (ObjectName name: objectNames) {
+                        System.out.println("ObjectName = " + name);
+                    }
                     return JCozProfilingErrorCodes.NORMAL_RETURN;
                 }
             }
