@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.Properties;
 
 import javax.management.JMX;
@@ -32,6 +33,7 @@ import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
+import javax.management.ObjectName;
 
 import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
@@ -44,7 +46,7 @@ import jcoz.service.JCozException;
 import jcoz.service.JCozExceptionFactory;
 import jcoz.service.VirtualMachineConnectionException;
 
-public class LocalProcessWrapper implements TargetProcessInterface{
+public class LocalProcessWrapper implements TargetProcessInterface {
 
     private VirtualMachine vm;
 
@@ -64,8 +66,16 @@ public class LocalProcessWrapper implements TargetProcessInterface{
             JMXServiceURL url = new JMXServiceURL(connectorAddress);
             JMXConnector connector = JMXConnectorFactory.connect(url);
             MBeanServerConnection mbeanConn = connector.getMBeanServerConnection();
-            mbeanProxy = JMX.newMXBeanProxy(mbeanConn, 
+            System.out.println("---- LocalProcessWrapper ---- MBean count - before call to JMX.newMBeanProxy: " + mbeanConn.getMBeanCount());
+            JCozProfiler.registerProfilerWithMBeanServer();
+            mbeanProxy = JMX.newMXBeanProxy(mbeanConn,
                     JCozProfiler.getMBeanName(),  JCozProfilerMBean.class);
+            System.out.println("---- LocalProcessWrapper ---- MBean count - after call to JMX.newMBeanProxy: " + mbeanConn.getMBeanCount());
+            System.out.println("---- LocalProcessWrapper ---- List of available MBeans: ");
+            Set<ObjectName> objectNames = mbeanConn.queryNames(null, null);
+            for (ObjectName name: objectNames) {
+                System.out.println("ObjectName = " + name);
+            }
         } catch(IOException | AttachNotSupportedException e){
             throw new VirtualMachineConnectionException(e);
         }
