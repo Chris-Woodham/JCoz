@@ -72,8 +72,10 @@ JAVA_HOME:=$(shell \
 	[[ -n "$${JAVA_HOME}" ]] || (echo "Cannot find JAVA_HOME" && exit); \
 	echo $${JAVA_HOME})
 
-INCLUDES=-I$(JAVA_HOME)/include \
-	-I$(JAVA_HOME)/include/$(UNAME) \
+JAVA_8_HOME="/usr/lib/jvm/java-8-openjdk-amd64/jre"
+
+INCLUDES=-I$(JAVA_8_HOME)/include \
+	-I$(JAVA_8_HOME)/include/$(UNAME) \
 	-I/usr/include
 
 SOURCES=$(wildcard $(SRC_DIR)/*.cc)
