@@ -65,16 +65,9 @@ COPTS:=$(PLATFORM_COPTS) \
 	$(GLOBAL_WARNINGS) \
 	$(OPT)
 
-JAVA_HOME:=$(shell \
-	[[ -n "$${JAVA_HOME}" ]] || \
-	  JAVA_HOME=$$(dirname $$(readlink -f $$(which java)))/..; \
-	[[ "$${JAVA_HOME}" =~ /jre ]] && JAVA_HOME=$${JAVA_HOME}/..; \
-	[[ -n "$${JAVA_HOME}" ]] || (echo "Cannot find JAVA_HOME" && exit); \
-	echo $${JAVA_HOME})
+JAVA_8_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
-JAVA_8_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre
-
-JAVA_HOME=JAVA_8_HOME/../
+JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
 INCLUDES=-I$(JAVA_8_HOME)/include \
 	-I$(JAVA_8_HOME)/include/$(UNAME) \
