@@ -72,7 +72,9 @@ JAVA_HOME:=$(shell \
 	[[ -n "$${JAVA_HOME}" ]] || (echo "Cannot find JAVA_HOME" && exit); \
 	echo $${JAVA_HOME})
 
-JAVA_8_HOME="/usr/lib/jvm/java-8-openjdk-amd64/jre"
+JAVA_8_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre
+
+JAVA_HOME=JAVA_8_HOME/../
 
 INCLUDES=-I$(JAVA_8_HOME)/include \
 	-I$(JAVA_8_HOME)/include/$(UNAME) \
