@@ -65,6 +65,10 @@ public class JCozCLI {
         remoteHostOption.setRequired(false);
         ops.addOption(remoteHostOption);
 
+        Option existingProfileOption = new Option("e", "existingProfile", true, "Name of .coz file to load existing profile from");
+        remoteHostOption.setRequired(false);
+        ops.addOption(existingProfileOption);
+
         CommandLineParser parser = new DefaultParser();
         CommandLine cl = parser.parse(ops, args);
         String ppClass = cl.getOptionValue('c');
@@ -89,7 +93,8 @@ public class JCozCLI {
         if (isRemote) {
             logger.info("Connecting to remote host {}", remoteHost);
             try {
-                Profile profile = new Profile(remoteHost);
+                String existingProfileName = cl.getOptionValue("e");
+                Profile profile = new Profile(remoteHost, existingProfileName);
                 final RemoteServiceWrapper remoteService = new RemoteServiceWrapper(remoteHost);
                 TargetProcessInterface profiledClient = remoteService.attachToProcess(pid);
                 profiledClient.setProgressPoint(ppClass, ppLineNo);
