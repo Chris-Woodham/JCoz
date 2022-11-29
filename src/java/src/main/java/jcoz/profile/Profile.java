@@ -21,6 +21,8 @@
 package jcoz.profile;
 
 import java.io.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,10 +48,14 @@ public class Profile {
 
     private RandomAccessFile stream;
 
-    public Profile(String process) {
+    public Profile(String process, String existingProfileFilename) {
         this.process = process;
 
-        this.initializeProfileLogging();
+        if (existingProfileFilename.isEmpty()) {
+            this.initializeProfileLogging();
+        } else {
+            this.loadExistingProfileLog(existingProfileFilename);
+        }
     }
 
     /**
@@ -128,6 +134,27 @@ public class Profile {
         this.stream.writeBytes(profText.toString());
     }
 
+    private void loadExistingProfileLog(String existingProfileFilename) {
+        File profile = new File(existingProfileFilename);
+        logger.info("Loading existing profile {}", profile.getAbsolutePath());
+
+        try {
+            this.stream = new RandomAccessFile(profile, "rw");
+        } catch (FileNotFoundException e) {
+            StringWriter stringWriter = new StringWriter();
+            e.printStackTrace(new PrintWriter(stringWriter));
+            logger.error("Unable to find existing jcoz.profile at {} \nStacktrace: {}", profile.getAbsolutePath(), stringWriter);
+        }
+
+        try {
+            this.readExperimentsFromLogFile();
+        } catch (IOException e) {
+            StringWriter stringWriter = new StringWriter();
+            e.printStackTrace(new PrintWriter(stringWriter));
+            logger.error("Unable to read jcoz.profile output at {}, stacktrace: {}", profile.getAbsolutePath(),stringWriter);
+        }
+    }
+
     /**
      * Open a stream to a .coz file. If there are any existing experiments in
      * the file, add those experiments to the current chart.
@@ -135,15 +162,15 @@ public class Profile {
      * @TODO(david): Allow the user to truncate and archive existing profiles.
      */
     private void initializeProfileLogging() {
-        File profile = new File(this.process + ".coz");
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMd-Hm"));
+        File profile = new File(this.process + "_" + timestamp + ".coz");
         logger.info("Creating profile {}", profile.getAbsolutePath());
         try {
             this.stream = new RandomAccessFile(profile, "rw");
-            this.readExperimentsFromLogFile();
-        } catch (IOException e) {
+        } catch (FileNotFoundException e) {
             StringWriter stringWriter = new StringWriter();
             e.printStackTrace(new PrintWriter(stringWriter));
-            logger.error("Unable to create jcoz.profile output file or read jcoz.profile output from file, stacktrace: {}", stringWriter);
+            logger.error("Unable to create jcoz.profile output file ({}), stacktrace: {}", profile.getAbsolutePath(),stringWriter);
         }
     }
 
