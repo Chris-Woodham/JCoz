@@ -51,7 +51,7 @@ public class Profile {
     public Profile(String process, String existingProfileFilename) {
         this.process = process;
 
-        if (existingProfileFilename.isEmpty()) {
+        if (existingProfileFilename == null) {
             this.initializeProfileLogging();
         } else {
             this.loadExistingProfileLog(existingProfileFilename);
