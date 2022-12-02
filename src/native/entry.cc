@@ -129,12 +129,12 @@ void CreateJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass) {
     return;
   }
   auto logger = prof->getLogger();
-  logger->info("In CreateJMethodIDsForClass start");
+  logger->debug("In CreateJMethodIDsForClass start");
   bool releaseLock = acquireCreateLock();
   jint method_count;
   JvmtiScopedPtr<jmethodID> methods(jvmti);
   jvmtiError e = jvmti->GetClassMethods(klass, &method_count, methods.GetRef());
-  logger->info("Got class methods from the JVM");
+  logger->debug("Got class methods from the JVM");
   if (e != JVMTI_ERROR_NONE) {
     JvmtiScopedPtr<char> ksig(jvmti);
     JVMTI_ERROR((jvmti->GetClassSignature(klass, ksig.GetRef(), NULL)));
@@ -144,12 +144,11 @@ void CreateJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass) {
     jvmti->GetClassSignature(klass, ksig.GetRef(), NULL);
 
     std::string package_str = "L" + prof->getPackage();
-    logger->info(
-        "Creating JMethod IDs. [Class: {class}] [Scope: {scope}]",
-        fmt::arg("class", ksig.Get()), fmt::arg("scope", package_str));
+    logger->debug(
+        "Creating JMethod IDs. [Class: {class}] [Scope: {scope}] [Class method count: {}]",
+        fmt::arg("class", ksig.Get()), fmt::arg("scope", package_str), method_count);
     if( strstr(ksig.Get(), package_str.c_str()) == ksig.Get() ) {
       prof->addInScopeMethods(method_count, methods.Get());
-
     }
 
     //TODO: this matches a prefix. class name AA will match a progress
@@ -178,6 +177,7 @@ jint JNICALL startProfilingNative(JNIEnv *env, jobject thisObj) {
   prof->Start();
   updateEventsEnabledState(jvmti, JVMTI_ENABLE);
   jvmti->GetLoadedClasses(&class_count, classes.GetRef());
+  logger->info("entry.cc - startProfilingNative(): Number of loaded classes: {}", class_count);
   jclass *classList = classes.Get();
   for (int i = 0; i < class_count; ++i) {
     jclass klass = classList[i];

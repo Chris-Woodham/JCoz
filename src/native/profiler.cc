@@ -51,7 +51,9 @@ __thread JNIEnv * Accessors::env_;
 #endif
 
 #define SIGNAL_FREQ 1000000L
+// Experiment time in milliseconds
 #define MIN_EXP_TIME 5000
+#define MAX_EXP_TIME 5000
 
 #define NUM_CALL_FRAMES 200
 
