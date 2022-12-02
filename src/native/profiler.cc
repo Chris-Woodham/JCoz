@@ -377,9 +377,9 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       jint end_line; // exclusive
       jint line = -1;
       std::vector<std::pair<jint, jint>> location_ranges;
-      for (int i = 1; i < num_entries; i++)
+      for (int i = 1; i < num_entries; i++) // Implicit condition of line == -1 due to break
       {
-        if (line == -1 && entries[i].start_location > exp_frame.lineno)
+        if (entries[i].start_location > exp_frame.lineno)
         {
           line = entries[i - 1].line_number;
           current_experiment.lineno = line;
