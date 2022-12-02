@@ -399,6 +399,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       {
         if (entries[i].line_number == line)
         {
+          logger->info("Profiler::runAgentThread() - Loop I think is redundant, if {} == selected entry index in previous line and only appears once, IM RIGHT!");
           if (i < num_entries - 1)
           {
             location_ranges.push_back(
