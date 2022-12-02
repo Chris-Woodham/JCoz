@@ -41,7 +41,7 @@ void JNICALL OnThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env,
                            jthread thread)
 {
   auto logger = prof->getLogger();
-  logger->info("OnThreadStart fired");
+  // logger->info("OnThreadStart fired");
   IMPLICITLY_USE(jvmti_env);
   IMPLICITLY_USE(thread);
   Accessors::SetCurrentJniEnv(jni_env);
@@ -52,7 +52,7 @@ void JNICALL OnThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env,
 void JNICALL OnThreadEnd(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread)
 {
   auto logger = prof->getLogger();
-  logger->info("OnThreadEnd fired");
+  // logger->info("OnThreadEnd fired");
   IMPLICITLY_USE(jvmti_env);
   IMPLICITLY_USE(jni_env);
   IMPLICITLY_USE(thread);
@@ -198,14 +198,14 @@ jint JNICALL startProfilingNative(JNIEnv *env, jobject thisObj)
   prof->Start();
   updateEventsEnabledState(jvmti, JVMTI_ENABLE);
   jvmti->GetLoadedClasses(&class_count, classes.GetRef());
-  logger->info("entry.cc - startProfilingNative(): Number of loaded classes: {}", class_count);
+  // logger->info("entry.cc - startProfilingNative(): Number of loaded classes: {}", class_count);
   jclass *classList = classes.Get();
   for (int i = 0; i < class_count; ++i)
   {
     jclass klass = classList[i];
     JvmtiScopedPtr<char> ksig(jvmti);
     jvmti->GetClassSignature(klass, ksig.GetRef(), NULL);
-    logger->info("Loading class {}", ksig.Get());
+    // logger->info("Loading class {}", ksig.Get());
     CreateJMethodIDsForClass(jvmti, klass);
   }
 

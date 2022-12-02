@@ -343,13 +343,13 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       logger->debug("Had {} call frames. Checking for in scope call frame...", call_frames.size());
       call_index = 0;
 
-      logger->info("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
-      for (int i = 0; i < call_frames.size(); i++)
-      {
-        JVMPI_CallFrame curFrame = call_frames.at(i);
-        std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
-        logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
-      }
+      // logger->info("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
+      // for (int i = 0; i < call_frames.size(); i++)
+      // {
+      //   JVMPI_CallFrame curFrame = call_frames.at(i);
+      //   std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
+      //   logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
+      // }
 
       std::random_shuffle(call_frames.begin(), call_frames.end());
       JVMPI_CallFrame exp_frame;
@@ -361,7 +361,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
         jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
         if (lineNumberError == JVMTI_ERROR_NONE)
         {
-          logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), (void *)exp_frame.method_id, exp_frame.lineno);
+          // logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), (void *)exp_frame.method_id, exp_frame.lineno);
           break;
         }
         else
@@ -392,7 +392,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
         {
           line = entries[i - 1].line_number;
           current_experiment.lineno = line;
-          logger->info("Profiler::runAgentThread() - Found in scope frame. For methodID {}: selected entry {}/{}, setting current_experiment.lineno={}", (void *)current_experiment.method_id, i, num_entries, line);
+          // logger->info("Profiler::runAgentThread() - Found in scope frame. For methodID {}: selected entry {}/{}, setting current_experiment.lineno={}", (void *)current_experiment.method_id, i, num_entries, line);
           break;
         }
       }
@@ -400,7 +400,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       {
         if (entries[i].line_number == line)
         {
-          logger->info("Profiler::runAgentThread() - Loop I think is redundant, if {} == selected entry index in previous line and only appears once, IM RIGHT!", i);
+          // logger->info("Profiler::runAgentThread() - Loop I think is redundant, if {} == selected entry index in previous line and only appears once, IM RIGHT!", i);
           if (i < num_entries - 1)
           {
             location_ranges.push_back(
