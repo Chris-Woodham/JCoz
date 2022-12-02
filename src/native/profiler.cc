@@ -342,6 +342,14 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
     {
       logger->debug("Had {} call frames. Checking for in scope call frame...", call_frames.size());
       call_index = 0;
+
+      logger->info("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
+      for (int i = 0; i < call_frames.size(); i++)
+      {
+        JVMPI_CallFrame curFrame = call_frames.at(i);
+        logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} lineNo={}", i, call_frames.size(), curFrame.method_id, curFrame.lineno);
+      }
+
       std::random_shuffle(call_frames.begin(), call_frames.end());
       JVMPI_CallFrame exp_frame;
       jint num_entries;
