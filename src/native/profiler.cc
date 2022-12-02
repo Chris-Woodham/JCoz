@@ -579,6 +579,7 @@ void Profiler::addProgressPoint(jint method_count, jmethodID *methods)
   // Only ever set progress point once
   if (end_to_end || ((progress_point->method_id) != nullptr))
   {
+    logger->error("Attempting to progress point more than once");
     return;
   }
 
@@ -604,6 +605,7 @@ void Profiler::addProgressPoint(jint method_count, jmethodID *methods)
         progress_point->location = curr_entry.start_location;
         jvmti->SetBreakpoint(progress_point->method_id, progress_point->location);
         logger->info("Progress point set");
+        logger->info("Setting progress point for - methodID: {}, loc: {}", methods[i], curr_entry.start_location);
         return;
       }
     }

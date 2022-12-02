@@ -159,11 +159,12 @@ void CreateJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass)
     jvmti->GetClassSignature(klass, ksig.GetRef(), NULL);
 
     std::string package_str = "L" + prof->getPackage();
-    logger->debug(
-        "Creating JMethod IDs. [Class: {class}] [Scope: {scope}] [Class method count: {}]",
-        fmt::arg("class", ksig.Get()), fmt::arg("scope", package_str), method_count);
+    logger->debug("Successfully got class method for {}", ksig.Get());
     if (strstr(ksig.Get(), package_str.c_str()) == ksig.Get())
     {
+      logger->info(
+          "Adding in scope JMethod IDs. [Class: {class}] [Scope: {scope}] [Class method count: {}]",
+          fmt::arg("class", ksig.Get()), fmt::arg("scope", package_str), method_count);
       prof->addInScopeMethods(method_count, methods.Get());
     }
 
@@ -172,6 +173,7 @@ void CreateJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass)
     std::string progress_pt_str = "L" + prof->getProgressClass();
     if (strstr(ksig.Get(), progress_pt_str.c_str()) == ksig.Get())
     {
+      logger->info("Progress point str ({}) matches class name ({}) - initiating profiler->addProgressPoint", progress_pt_str, ksig.Get());
       prof->addProgressPoint(method_count, methods.Get());
     }
   }
