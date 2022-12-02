@@ -352,6 +352,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
         jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
         if (lineNumberError == JVMTI_ERROR_NONE)
         {
+          logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), exp_frame.method_id, exp_frame.lineno);
           break;
         }
         else
@@ -382,6 +383,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
         {
           line = entries[i - 1].line_number;
           current_experiment.lineno = line;
+          logger->info("Profiler::runAgentThread() - Found in scope frame. For methodID {}: selected entry {}/{}, setting current_experiment.lineno={}", current_experiment.method_id, i, num_entries, line);
           break;
         }
       }
@@ -550,7 +552,7 @@ bool inline Profiler::frameInScope(JVMPI_CallFrame &curr_frame)
 
 void Profiler::addInScopeMethods(jint method_count, jmethodID *methods)
 {
-  logger->info("Adding {:d} in scope methods\n", method_count);
+  logger->info("Adding {:d} in scope methods", method_count);
   while (!__sync_bool_compare_and_swap(&in_scope_lock, 0, pthread_self()))
     ;
   std::atomic_thread_fence(std::memory_order_acquire);
@@ -605,7 +607,6 @@ void Profiler::addProgressPoint(jint method_count, jmethodID *methods)
         progress_point->location = curr_entry.start_location;
         jvmti->SetBreakpoint(progress_point->method_id, progress_point->location);
         logger->info("Progress point set");
-        logger->info("Setting progress point for - methodID: {}, loc: {}", methods[i], curr_entry.start_location);
         return;
       }
     }
