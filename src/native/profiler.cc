@@ -373,7 +373,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
           if (lineNumberError == JVMTI_ERROR_NONE)
           {
             // logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), (void *)exp_frame.method_id, exp_frame.lineno);
-            number_method_experiments_hash_table[std::to_string(exp_frame.method_id)] = method_experiment_count + 1;
+            number_method_experiments_hash_table[std::to_string(exp_frame.method_id)] += 1;
             break;
           }
           else
