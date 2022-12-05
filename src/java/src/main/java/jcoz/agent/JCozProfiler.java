@@ -185,7 +185,8 @@ public class JCozProfiler implements JCozProfilerMBean {
         if (experimentRunning) {
             return JCozProfilingErrorCodes.CANNOT_CALL_WHEN_RUNNING;
         }
-        int scopeReturn = setScopeNative(scopePackage);
+        String passedScope = scopePackage.replace(".", "/");
+        int scopeReturn = setScopeNative(passedScope);
         if (scopeReturn == 0) {
             currentScope = scopePackage;
         }
