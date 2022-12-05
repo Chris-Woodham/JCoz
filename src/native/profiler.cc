@@ -366,7 +366,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
         {
           number_method_experiments_hash_table[exp_frame.method_id] = 1;
         }
-        int method_experiment_count = number_method_experiments_hash_table.find((exp_frame.method_id);
+        int method_experiment_count = number_method_experiments_hash_table.find(exp_frame.method_id);
         if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD || (i == call_frames.size() - 1))
         {
           jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
