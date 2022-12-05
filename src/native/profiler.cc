@@ -86,7 +86,7 @@ jmethodID Profiler::mbean_cache_method_id;
 JNIEnv *Profiler::jni_;
 // Adding a hash table to track number of experiments for each method
 // This is in order to prevent JCoz over-sampling common methods (e.g. TokenService:66 was picked approx 20% of times for experiments in previous large run)
-std::unordered_map<long, int> number_method_experiments_hash_table;
+std::unordered_map<jmethodID, int> number_method_experiments_hash_table;
 #define MAX_NO_EXPERIMENTS_PER_METHOD 250
 
 // How long should we wait before starting an experiment
