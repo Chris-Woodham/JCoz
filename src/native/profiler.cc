@@ -84,6 +84,10 @@ unsigned long Profiler::experiment_time = MIN_EXP_TIME;
 jobject Profiler::mbean;
 jmethodID Profiler::mbean_cache_method_id;
 JNIEnv *Profiler::jni_;
+// Adding a hash table to track number of experiments for each method
+// This is in order to prevent JCoz over-sampling common methods (e.g. TokenService:66 was picked approx 20% of times for experiments in previous large run)
+std::unordered_map<long, int> number_method_experiments_hash_table;
+#define MAX_NO_EXPERIMENTS_PER_METHOD 250
 
 // How long should we wait before starting an experiment
 unsigned long Profiler::warmup_time = 5000000;
@@ -358,15 +362,26 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       for (int i = 0; i < call_frames.size(); i++)
       {
         exp_frame = call_frames.at(i);
-        jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
-        if (lineNumberError == JVMTI_ERROR_NONE)
+        if (number_method_experiments_hash_table.find(exp_frame.method_id) == number_method_experiments_hash_table.end())
         {
-          // logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), (void *)exp_frame.method_id, exp_frame.lineno);
-          break;
+          number_method_experiments_hash_table.insert(exp_frame.method_id, 1);
         }
-        else
+        int method_experiment_count = number_method_experiments_hash_table.find(exp_frame.method_id);
+        if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD || (i == call_frames.size() - 1))
         {
-          jvmti->Deallocate((unsigned char *)entries);
+          number_method_experiments_hash_table.insert_or_assign(exp_frame.method_id, method_experiment_count + 1);
+          jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
+          if (lineNumberError == JVMTI_ERROR_NONE)
+          {
+            // logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), (void *)exp_frame.method_id, exp_frame.lineno);
+            break;
+          }
+          else
+          {
+            jvmti->Deallocate((unsigned char *)entries);
+          }
+        } else {
+          break;
         }
       }
 
