@@ -364,7 +364,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       }
 
       std::random_shuffle(call_frames.begin(), call_frames.end());
-      std::shuffle(unique_call_frames.begin(), unique_call_frames.end());
+      std::random_shuffle(unique_call_frames.begin(), unique_call_frames.end());
       JVMPI_CallFrame exp_frame;
       jint num_entries;
       jvmtiLineNumberEntry *entries = NULL;
