@@ -298,6 +298,12 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   logger->info("Finished experiment, flushed logs, and delete current location ranges.");
 }
 
+struct JVMPICallFrameCmp {
+  bool operator()(const JVMPI_CallFrame&lhs, const JVMPI_CallFrame&rhs) const {
+    return lhs.lineno != rhs.lineno && lhs.method_id != rhs.method_id;
+  }
+};
+
 void JNICALL
 Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
 {
@@ -348,13 +354,12 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       logger->debug("Had {} call frames. Checking for in scope call frame...", call_frames.size());
       call_index = 0;
 
-      // logger->info("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
-      // for (int i = 0; i < call_frames.size(); i++)
-      // {
-      //   JVMPI_CallFrame curFrame = call_frames.at(i);
-      //   std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
-      //   logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
-      // }
+      logger->info("Profiler::runAgentThread() - Found {} unique call frames", unique_call_frames.size());
+      for (auto &current_frame: unique_call_frames)
+      {
+        std::string methodName = std::string(getClassFromMethodIDLocation(current_frame.method_id));
+        logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
+      }
 
       std::random_shuffle(call_frames.begin(), call_frames.end());
       std::shuffle(unique_call_frames.begin(), unique_call_frames.end());
