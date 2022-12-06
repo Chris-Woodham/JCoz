@@ -360,8 +360,9 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
     {
       call_frames.push_back(static_call_frames[i]);
     }
-    if (call_frames.size() > 0)
-    {
+
+    // Gets the unique call frames
+    if (call_frames.size() > 0) {
       logger->debug("Had {} call frames. Checking for in scope call frame...", call_frames.size());
       call_index = 0;
 
@@ -370,7 +371,10 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       auto last = std::unique(call_frames.begin(), call_frames.end());
       call_frames.erase(last, call_frames.end());
       logger->info("Profiler::runAgentThread() - Found {} unique call frames", call_frames.size());
+    }
 
+    if (call_frames.size() > 0)
+    {
       std::random_shuffle(call_frames.begin(), call_frames.end());
 
       JVMPI_CallFrame exp_frame;
