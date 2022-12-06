@@ -309,10 +309,10 @@ void Profiler::runExperiment(JNIEnv *jni_env)
 }
 
 bool compareJVMPICallFrame(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs) {
-  if ((void *)lhs.method_id == (void *)rhs.method_id) {
+  if (lhs.method_id == rhs.method_id) {
     return lhs.lineno < rhs.lineno;
   } else {
-    return (void *)lhs.method_id < (void *)rhs.method_id;
+    return lhs.method_id < rhs.method_id;
   }
 }
 
@@ -366,25 +366,12 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       call_index = 0;
 
       logger->info("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
-      for (int i = 0; i < call_frames.size(); i++)
-      {
-        JVMPI_CallFrame curFrame = call_frames.at(i);
-        std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
-        logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
-      }
       std::sort(call_frames.begin(), call_frames.end(), compareJVMPICallFrame);
       auto last = std::unique(call_frames.begin(), call_frames.end());
       call_frames.erase(last, call_frames.end());
       logger->info("Profiler::runAgentThread() - Found {} unique call frames", call_frames.size());
 
       std::random_shuffle(call_frames.begin(), call_frames.end());
-
-      for (int i = 0; i < call_frames.size(); i++)
-      {
-        JVMPI_CallFrame curFrame = call_frames.at(i);
-        std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
-        logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
-      }
 
       JVMPI_CallFrame exp_frame;
       jint num_entries;
