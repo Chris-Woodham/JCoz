@@ -584,7 +584,7 @@ void Profiler::addInScopeMethods(jint method_count, jmethodID *methods)
   for (int i = 0; i < method_count; i++)
   {
     void *method = (void *)methods[i];
-    logger->info("Adding in scope method {}\n", method);
+    logger->info("Adding in scope method {}", method);
     in_scope_ids.insert(method);
   }
   in_scope_lock = 0;
