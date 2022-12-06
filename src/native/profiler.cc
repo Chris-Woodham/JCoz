@@ -352,12 +352,38 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       // }
 
       std::random_shuffle(call_frames.begin(), call_frames.end());
+
+      std::set<JVMPI_CallFrame> unique_call_frames(call_frames.begin(), call_frames.end());
+
       JVMPI_CallFrame exp_frame;
       jint num_entries;
       jvmtiLineNumberEntry *entries = NULL;
-      for (int i = 0; i < call_frames.size(); i++)
+
+      // for (int i = 0; i < call_frames.size(); i++)
+      // {
+      //   exp_frame = call_frames.at(i);
+      //   jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
+      //   if (lineNumberError == JVMTI_ERROR_NONE)
+      //   {
+      //     // logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), (void *)exp_frame.method_id, exp_frame.lineno);
+      //     break;
+      //   }
+      //   else
+      //   {
+      //     jvmti->Deallocate((unsigned char *)entries);
+      //   }
+      // }
+
+      logger->info("Profiler::runAgentThread() - Found {} unique call frames", unique_call_frames.size());
+      for (JVMPI_CallFrame& curFrame: unique_call_frames)
       {
-        exp_frame = call_frames.at(i);
+        std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
+        logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
+      }
+
+      for (JVMPI_CallFrame& cur_frame: unique_call_frames)
+      {
+        exp_frame = cur_frame;
         jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
         if (lineNumberError == JVMTI_ERROR_NONE)
         {
