@@ -342,6 +342,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
     {
       call_frames.push_back(static_call_frames[i]);
     }
+    std::set<JVMPI_CallFrame> unique_call_frames(call_frames.begin(), call_frames.end());
     if (call_frames.size() > 0)
     {
       logger->debug("Had {} call frames. Checking for in scope call frame...", call_frames.size());
@@ -356,20 +357,22 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       // }
 
       std::random_shuffle(call_frames.begin(), call_frames.end());
+      std::shuffle(unique_call_frames.begin(), unique_call_frames.end());
       JVMPI_CallFrame exp_frame;
       jint num_entries;
       jvmtiLineNumberEntry *entries = NULL;
-      for (int i = 0; i < call_frames.size(); i++)
+      for (int i = 0; i < unique_call_frames.size(); i++)
       {
-        exp_frame = call_frames.at(i);
-        std::string method_class_and_line_no =  std::string(getClassFromMethodIDLocation(exp_frame.method_id));
+        // exp_frame = call_frames.at(i);
+        exp_frame = unique_call_frames.at(i);
+        std::string method_class_and_line_no = std::string(getClassFromMethodIDLocation(exp_frame.method_id));
         method_class_and_line_no += std::to_string(exp_frame.lineno);
         if (number_method_experiments_hash_table.find(method_class_and_line_no) == number_method_experiments_hash_table.end())
         {
           number_method_experiments_hash_table.insert({method_class_and_line_no, 0});
         }
         int method_experiment_count = number_method_experiments_hash_table.find(method_class_and_line_no)->second;
-        if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD || (i == (call_frames.size() - 1)))
+        if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD || (i == (unique_call_frames.size() - 1)))
         {
           jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
           if (lineNumberError == JVMTI_ERROR_NONE)
