@@ -361,10 +361,35 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       JVMPI_CallFrame exp_frame;
       jint num_entries;
       jvmtiLineNumberEntry *entries = NULL;
-      for (int i = 0; i < unique_call_frames.size(); i++)
+      // for (int i = 0; i < unique_call_frames.size(); i++)
+      // {
+      //   // exp_frame = call_frames.at(i);
+      //   exp_frame = unique_call_frames.at(i);
+      //   std::string method_class_and_line_no = std::string(getClassFromMethodIDLocation(exp_frame.method_id));
+      //   method_class_and_line_no += std::to_string(exp_frame.lineno);
+      //   if (number_method_experiments_hash_table.find(method_class_and_line_no) == number_method_experiments_hash_table.end())
+      //   {
+      //     number_method_experiments_hash_table.insert({method_class_and_line_no, 0});
+      //   }
+      //   int method_experiment_count = number_method_experiments_hash_table.find(method_class_and_line_no)->second;
+      //   if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD || (i == (unique_call_frames.size() - 1)))
+      //   {
+      //     jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
+      //     if (lineNumberError == JVMTI_ERROR_NONE)
+      //     {
+      //       // logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), (void *)exp_frame.method_id, exp_frame.lineno);
+      //       number_method_experiments_hash_table[method_class_and_line_no] += 1;
+      //       break;
+      //     }
+      //     else
+      //     {
+      //       jvmti->Deallocate((unsigned char *)entries);
+      //     }
+      //   }
+      // }
+      for (auto &current_frame: unique_call_frames)
       {
-        // exp_frame = call_frames.at(i);
-        exp_frame = unique_call_frames.at(i);
+        exp_frame = current_frame;
         std::string method_class_and_line_no = std::string(getClassFromMethodIDLocation(exp_frame.method_id));
         method_class_and_line_no += std::to_string(exp_frame.lineno);
         if (number_method_experiments_hash_table.find(method_class_and_line_no) == number_method_experiments_hash_table.end())
@@ -372,7 +397,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
           number_method_experiments_hash_table.insert({method_class_and_line_no, 0});
         }
         int method_experiment_count = number_method_experiments_hash_table.find(method_class_and_line_no)->second;
-        if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD || (i == (unique_call_frames.size() - 1)))
+        if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD )
         {
           jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
           if (lineNumberError == JVMTI_ERROR_NONE)
