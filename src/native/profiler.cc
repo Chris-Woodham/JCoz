@@ -216,11 +216,15 @@ float Profiler::calculate_random_speedup()
 }
 
 bool operator<(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs){
-  if ((void *)lhs.method_id == (void *)rhs.method_id) {
+  if (lhs.method_id == rhs.method_id) {
     return lhs.lineno < rhs.lineno;
   } else {
-    return (void *)lhs.method_id < (void *)rhs.method_id;
+    return lhs.method_id < rhs.method_id;
   }
+}
+
+bool operator==(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs){
+  return lhs.method_id == rhs.method_id && lhs.lineno == rhs.lineno;
 }
 
 void Profiler::runExperiment(JNIEnv *jni_env)
@@ -362,20 +366,25 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       call_index = 0;
 
       logger->info("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
-      std::sort(call_frames.begin(), call_frame.end(), compareJVMPICallFrame);
+      for (int i = 0; i < call_frames.size(); i++)
+      {
+        JVMPI_CallFrame curFrame = call_frames.at(i);
+        std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
+        logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
+      }
+      std::sort(call_frames.begin(), call_frames.end(), compareJVMPICallFrame);
       auto last = std::unique(call_frames.begin(), call_frames.end());
       call_frames.erase(last, call_frames.end());
       logger->info("Profiler::runAgentThread() - Found {} unique call frames", call_frames.size());
 
-      // logger->info("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
-      // for (int i = 0; i < call_frames.size(); i++)
-      // {
-      //   JVMPI_CallFrame curFrame = call_frames.at(i);
-      //   std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
-      //   logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
-      // }
-
       std::random_shuffle(call_frames.begin(), call_frames.end());
+
+      for (int i = 0; i < call_frames.size(); i++)
+      {
+        JVMPI_CallFrame curFrame = call_frames.at(i);
+        std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
+        logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
+      }
 
       JVMPI_CallFrame exp_frame;
       jint num_entries;
@@ -395,35 +404,6 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
           jvmti->Deallocate((unsigned char *)entries);
         }
       }
-
-      // logger->info("Profiler::runAgentThread() - Found {} unique call frames", unique_call_frames.size());
-      // for (auto& curFrame: unique_call_frames)
-      // {
-      //   std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
-      //   logger->info("Profiler::runAgentThread() - mthID={} name={} lineNo={}",  (void *)curFrame.method_id, methodName, curFrame.lineno);
-      // }
-
-      // std::set<JVMPI_CallFrame>::iterator itr;
-      // for (itr = unique_call_frames.begin(); itr != unique_call_frames.end(); itr++) {
-      //   JVMPI_CallFrame curFrame = *itr;
-      //   std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
-      //   logger->info("Profiler::runAgentThread() - mthID={} name={} lineNo={}",  (void *)curFrame.method_id, methodName, curFrame.lineno);
-      // }
-
-      // for (auto& cur_frame: unique_call_frames)
-      // {
-      //   exp_frame = cur_frame;
-      //   jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
-      //   if (lineNumberError == JVMTI_ERROR_NONE)
-      //   {
-      //     // logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), (void *)exp_frame.method_id, exp_frame.lineno);
-      //     break;
-      //   }
-      //   else
-      //   {
-      //     jvmti->Deallocate((unsigned char *)entries);
-      //   }
-      // }
 
       // If we don't find anything in scope, try again
       if (entries == NULL)
