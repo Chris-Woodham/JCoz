@@ -87,7 +87,7 @@ JNIEnv *Profiler::jni_;
 // Adding a hash table to track number of experiments for each method
 // This is in order to prevent JCoz over-sampling common methods (e.g. TokenService:66 was picked approx 20% of times for experiments in previous large run)
 std::unordered_map<std::string, int> number_method_experiments_hash_table;
-#define MAX_NO_EXPERIMENTS_PER_METHOD 250
+#define MAX_NO_EXPERIMENTS_PER_METHOD 500
 
 // How long should we wait before starting an experiment
 unsigned long Profiler::warmup_time = 5000000;
@@ -362,26 +362,26 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       for (int i = 0; i < call_frames.size(); i++)
       {
         exp_frame = call_frames.at(i);
-        if (number_method_experiments_hash_table.find(std::to_string(exp_frame.method_id)) == number_method_experiments_hash_table.end())
+        std::string method_class_and_line_no =  std::string(getClassFromMethodIDLocation(exp_frame.method_id));
+        method_class_and_line_no += std::to_string(exp_frame.lineno);
+        if (number_method_experiments_hash_table.find(method_class_and_line_no) == number_method_experiments_hash_table.end())
         {
-          number_method_experiments_hash_table[std::to_string(exp_frame.method_id)] = 1;
+          number_method_experiments_hash_table.insert({method_class_and_line_no, 0});
         }
-        int method_experiment_count = number_method_experiments_hash_table.find(std::to_string(exp_frame.method_id));
-        if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD || (i == call_frames.size() - 1))
+        int method_experiment_count = number_method_experiments_hash_table.find(method_class_and_line_no)->second;
+        if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD || (i == (call_frames.size() - 1)))
         {
           jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
           if (lineNumberError == JVMTI_ERROR_NONE)
           {
             // logger->info("Profiler::runAgentThread() - Selecting call frame at index {}/{} with methodID {} L{}", i, call_frames.size(), (void *)exp_frame.method_id, exp_frame.lineno);
-            number_method_experiments_hash_table[std::to_string(exp_frame.method_id)] += 1;
+            number_method_experiments_hash_table[method_class_and_line_no] += 1;
             break;
           }
           else
           {
             jvmti->Deallocate((unsigned char *)entries);
           }
-        } else {
-          break;
         }
       }
 
