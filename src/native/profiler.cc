@@ -357,9 +357,9 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       call_index = 0;
 
       logger->info("Profiler::runAgentThread() - Found {} unique call frames", unique_call_frames.size());
-      for (auto &current_frame : unique_call_frames)
+      for (auto &curFrame : unique_call_frames)
       {
-        std::string methodName = std::string(getClassFromMethodIDLocation(current_frame.method_id));
+        std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
         logger->info("Profiler::runAgentThread() - mthID={} name={} lineNo={}", (void *)curFrame.method_id, methodName, curFrame.lineno);
       }
 
