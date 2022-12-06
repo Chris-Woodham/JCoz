@@ -213,6 +213,14 @@ float Profiler::calculate_random_speedup()
   }
 }
 
+bool operator<(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs){
+  if ((void *)lhs.method_id == (void *)rhs.method_id) {
+    return lhs.lineno < rhs.lineno;
+  } else {
+    return (void *)lhs.method_id < (void *)rhs.method_id;
+  }
+}
+
 void Profiler::runExperiment(JNIEnv *jni_env)
 {
   logger->info("Running experiment");
