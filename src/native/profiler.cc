@@ -350,11 +350,14 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
     {
       call_frames.push_back(static_call_frames[i]);
     }
-    std::set<JVMPI_CallFrame, JVMPICallFrameCmp> unique_call_frames(call_frames.begin(), call_frames.end());
     if (call_frames.size() > 0)
     {
+      std::random_shuffle(call_frames.begin(), call_frames.end());
+
       logger->debug("Had {} call frames. Checking for in scope call frame...", call_frames.size());
       call_index = 0;
+
+      std::set<JVMPI_CallFrame, JVMPICallFrameCmp> unique_call_frames(call_frames.begin(), call_frames.end());
 
       logger->info("Profiler::runAgentThread() - Found {} unique call frames", unique_call_frames.size());
       for (auto &curFrame : unique_call_frames)
@@ -364,7 +367,6 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       }
 
       std::random_shuffle(call_frames.begin(), call_frames.end());
-      std::random_shuffle(unique_call_frames.begin(), unique_call_frames.end());
       JVMPI_CallFrame exp_frame;
       jint num_entries;
       jvmtiLineNumberEntry *entries = NULL;
