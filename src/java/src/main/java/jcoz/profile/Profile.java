@@ -162,7 +162,7 @@ public class Profile {
      * @TODO(david): Allow the user to truncate and archive existing profiles.
      */
     private void initializeProfileLogging() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMd-Hm"));
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMdd-HHmm"));
         File profile = new File(this.process + "_" + timestamp + ".coz");
         logger.info("Creating profile {}", profile.getAbsolutePath());
         try {
