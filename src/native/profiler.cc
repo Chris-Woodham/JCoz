@@ -348,7 +348,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
     {
       call_frames.push_back(static_call_frames[i]);
     }
-    std::set<JVMPI_CallFrame> unique_call_frames(call_frames.begin(), call_frames.end());
+    std::set<JVMPI_CallFrame, JVMPICallFrameCmp> unique_call_frames(call_frames.begin(), call_frames.end());
     if (call_frames.size() > 0)
     {
       logger->debug("Had {} call frames. Checking for in scope call frame...", call_frames.size());
