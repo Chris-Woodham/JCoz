@@ -298,8 +298,10 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   logger->info("Finished experiment, flushed logs, and delete current location ranges.");
 }
 
-struct JVMPICallFrameCmp {
-  bool operator()(const JVMPI_CallFrame&lhs, const JVMPI_CallFrame&rhs) const {
+struct JVMPICallFrameCmp
+{
+  bool operator()(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs) const
+  {
     return lhs.lineno != rhs.lineno && lhs.method_id != rhs.method_id;
   }
 };
@@ -355,10 +357,10 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       call_index = 0;
 
       logger->info("Profiler::runAgentThread() - Found {} unique call frames", unique_call_frames.size());
-      for (auto &current_frame: unique_call_frames)
+      for (auto &current_frame : unique_call_frames)
       {
         std::string methodName = std::string(getClassFromMethodIDLocation(current_frame.method_id));
-        logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
+        logger->info("Profiler::runAgentThread() - mthID={} name={} lineNo={}", (void *)curFrame.method_id, methodName, curFrame.lineno);
       }
 
       std::random_shuffle(call_frames.begin(), call_frames.end());
@@ -392,7 +394,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       //     }
       //   }
       // }
-      for (auto &current_frame: unique_call_frames)
+      for (auto &current_frame : unique_call_frames)
       {
         exp_frame = current_frame;
         std::string method_class_and_line_no = std::string(getClassFromMethodIDLocation(exp_frame.method_id));
@@ -402,7 +404,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
           number_method_experiments_hash_table.insert({method_class_and_line_no, 0});
         }
         int method_experiment_count = number_method_experiments_hash_table.find(method_class_and_line_no)->second;
-        if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD )
+        if (method_experiment_count <= MAX_NO_EXPERIMENTS_PER_METHOD)
         {
           jvmtiError lineNumberError = jvmti->GetLineNumberTable(exp_frame.method_id, &num_entries, &entries);
           if (lineNumberError == JVMTI_ERROR_NONE)
