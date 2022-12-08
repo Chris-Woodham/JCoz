@@ -57,6 +57,9 @@ __thread JNIEnv *Accessors::env_;
 #define MIN_EXP_TIME 5000
 #define MAX_EXP_TIME 80000
 
+#define INC_EXP_TIME_THRESHOLD 5
+#define DEC_EXP_TIME_THRESHOLD 20
+
 #define NUM_CALL_FRAMES 200
 
 typedef std::chrono::duration<int, std::milli> milliseconds_type;
@@ -284,14 +287,14 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   // Maybe update the experiment length
   if (!fix_exp)
   {
-    if (current_experiment.points_hit <= 5)
+    if (current_experiment.points_hit <= INC_EXP_TIME_THRESHOLD)
     {
       experiment_time *= 2;
       if (experiment_time > MAX_EXP_TIME) {
         experiment_time = MAX_EXP_TIME;
       }
     }
-    else if ((experiment_time > MIN_EXP_TIME) && (current_experiment.points_hit >= 20))
+    else if ((experiment_time > MIN_EXP_TIME) && (current_experiment.points_hit >= DEC_EXP_TIME_THRESHOLD))
     {
       experiment_time /= 2;
     }
