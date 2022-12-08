@@ -55,7 +55,7 @@ __thread JNIEnv *Accessors::env_;
 #define SIGNAL_FREQ 1000000L
 // Experiment time in milliseconds
 #define MIN_EXP_TIME 5000
-#define MAX_EXP_TIME 5000
+#define MAX_EXP_TIME 80000
 
 #define NUM_CALL_FRAMES 200
 
@@ -287,6 +287,9 @@ void Profiler::runExperiment(JNIEnv *jni_env)
     if (current_experiment.points_hit <= 5)
     {
       experiment_time *= 2;
+      if (experiment_time > MAX_EXP_TIME) {
+        experiment_time = MAX_EXP_TIME;
+      }
     }
     else if ((experiment_time > MIN_EXP_TIME) && (current_experiment.points_hit >= 20))
     {
@@ -588,14 +591,14 @@ bool inline Profiler::frameInScope(JVMPI_CallFrame &curr_frame)
 
 void Profiler::addInScopeMethods(jint method_count, jmethodID *methods)
 {
-  logger->info("Adding {:d} in scope methods", method_count);
+  //logger->info("Adding {:d} in scope methods", method_count);
   while (!__sync_bool_compare_and_swap(&in_scope_lock, 0, pthread_self()))
     ;
   std::atomic_thread_fence(std::memory_order_acquire);
   for (int i = 0; i < method_count; i++)
   {
     void *method = (void *)methods[i];
-    logger->info("Adding in scope method {}\n", method);
+    //logger->info("Adding in scope method {}", method);
     in_scope_ids.insert(method);
   }
   in_scope_lock = 0;
