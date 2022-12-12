@@ -43,6 +43,8 @@
 #include "display.h"
 #include "globals.h"
 
+#include <algorithm>
+
 #ifdef __APPLE__
 // See comment in Accessors class
 pthread_key_t Accessors::key_;
@@ -53,7 +55,10 @@ __thread JNIEnv *Accessors::env_;
 #define SIGNAL_FREQ 1000000L
 // Experiment time in milliseconds
 #define MIN_EXP_TIME 5000
-#define MAX_EXP_TIME 5000
+#define MAX_EXP_TIME 80000
+
+#define INC_EXP_TIME_THRESHOLD 5
+#define DEC_EXP_TIME_THRESHOLD 20
 
 #define NUM_CALL_FRAMES 200
 
@@ -213,6 +218,18 @@ float Profiler::calculate_random_speedup()
   }
 }
 
+bool operator<(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs){
+  if (lhs.method_id == rhs.method_id) {
+    return lhs.lineno < rhs.lineno;
+  } else {
+    return lhs.method_id < rhs.method_id;
+  }
+}
+
+bool operator==(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs){
+  return lhs.method_id == rhs.method_id && lhs.lineno == rhs.lineno;
+}
+
 void Profiler::runExperiment(JNIEnv *jni_env)
 {
   logger->info("Running experiment");
@@ -270,11 +287,14 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   // Maybe update the experiment length
   if (!fix_exp)
   {
-    if (current_experiment.points_hit <= 5)
+    if (current_experiment.points_hit <= INC_EXP_TIME_THRESHOLD)
     {
       experiment_time *= 2;
+      if (experiment_time > MAX_EXP_TIME) {
+        experiment_time = MAX_EXP_TIME;
+      }
     }
-    else if ((experiment_time > MIN_EXP_TIME) && (current_experiment.points_hit >= 20))
+    else if ((experiment_time > MIN_EXP_TIME) && (current_experiment.points_hit >= DEC_EXP_TIME_THRESHOLD))
     {
       experiment_time /= 2;
     }
@@ -292,6 +312,14 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   free(sig);
 
   logger->info("Finished experiment, flushed logs, and delete current location ranges.");
+}
+
+bool compareJVMPICallFrame(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs) {
+  if (lhs.method_id == rhs.method_id) {
+    return lhs.lineno < rhs.lineno;
+  } else {
+    return lhs.method_id < rhs.method_id;
+  }
 }
 
 void JNICALL
@@ -338,23 +366,27 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
     {
       call_frames.push_back(static_call_frames[i]);
     }
-    if (call_frames.size() > 0)
-    {
+
+    // Gets the unique call frames
+    if (call_frames.size() > 0) {
       logger->debug("Had {} call frames. Checking for in scope call frame...", call_frames.size());
       call_index = 0;
 
-      // logger->info("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
-      // for (int i = 0; i < call_frames.size(); i++)
-      // {
-      //   JVMPI_CallFrame curFrame = call_frames.at(i);
-      //   std::string methodName = std::string(getClassFromMethodIDLocation(curFrame.method_id));
-      //   logger->info("Profiler::runAgentThread() - Frame {}/{}: mthID={} name={} lineNo={}", i, call_frames.size(), (void *)curFrame.method_id, methodName, curFrame.lineno);
-      // }
+      logger->info("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
+      std::sort(call_frames.begin(), call_frames.end(), compareJVMPICallFrame);
+      auto last = std::unique(call_frames.begin(), call_frames.end());
+      call_frames.erase(last, call_frames.end());
+      logger->info("Profiler::runAgentThread() - Found {} unique call frames", call_frames.size());
+    }
 
+    if (call_frames.size() > 0)
+    {
       std::random_shuffle(call_frames.begin(), call_frames.end());
+
       JVMPI_CallFrame exp_frame;
       jint num_entries;
       jvmtiLineNumberEntry *entries = NULL;
+
       for (int i = 0; i < call_frames.size(); i++)
       {
         exp_frame = call_frames.at(i);
@@ -562,14 +594,14 @@ bool inline Profiler::frameInScope(JVMPI_CallFrame &curr_frame)
 
 void Profiler::addInScopeMethods(jint method_count, jmethodID *methods)
 {
-  logger->info("Adding {:d} in scope methods", method_count);
+  //logger->info("Adding {:d} in scope methods", method_count);
   while (!__sync_bool_compare_and_swap(&in_scope_lock, 0, pthread_self()))
     ;
   std::atomic_thread_fence(std::memory_order_acquire);
   for (int i = 0; i < method_count; i++)
   {
     void *method = (void *)methods[i];
-    logger->info("Adding in scope method {}\n", method);
+    //logger->info("Adding in scope method {}", method);
     in_scope_ids.insert(method);
   }
   in_scope_lock = 0;
