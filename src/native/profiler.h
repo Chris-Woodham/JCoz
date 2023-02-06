@@ -31,6 +31,7 @@
 
 #include "globals.h"
 #include "stacktraces.h"
+#include "config.h"
 #include "spdlog/spdlog.h"
 #ifdef SPDLOG_VERSION
 #include "spdlog/sinks/basic_file_sink.h"
@@ -87,7 +88,9 @@ struct TraceData
 class Profiler
 {
 public:
-  explicit Profiler(jvmtiEnv *jvmti) : jvmti_(jvmti) {}
+  explicit Profiler(jvmtiEnv *jvmti) : jvmti_(jvmti) {
+    logger->set_level(profiler_log_level);
+  }
 
   void Start();
 
