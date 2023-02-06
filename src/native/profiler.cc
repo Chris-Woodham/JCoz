@@ -52,16 +52,6 @@ pthread_key_t Accessors::key_;
 __thread JNIEnv *Accessors::env_;
 #endif
 
-#define SIGNAL_FREQ 1000000L
-// Experiment time in milliseconds
-#define MIN_EXP_TIME 5000
-#define MAX_EXP_TIME 80000
-
-#define INC_EXP_TIME_THRESHOLD 5
-#define DEC_EXP_TIME_THRESHOLD 20
-
-#define NUM_CALL_FRAMES 200
-
 typedef std::chrono::duration<int, std::milli> milliseconds_type;
 typedef std::chrono::duration<long, std::nano> nanoseconds_type;
 
@@ -91,7 +81,7 @@ jmethodID Profiler::mbean_cache_method_id;
 JNIEnv *Profiler::jni_;
 
 // How long should we wait before starting an experiment
-unsigned long Profiler::warmup_time = 5000000;
+unsigned long Profiler::warmup_time = PROFILER_WARMUP_TIME;
 bool Profiler::prof_ready = false;
 
 // Progress point stuff
@@ -107,7 +97,7 @@ bool Profiler::fix_exp = false;
 nanoseconds_type startup_time;
 
 // Logger
-std::shared_ptr<spdlog::logger> Profiler::logger = spdlog::basic_logger_mt("basic_logger", "/usr/local/tomcat/logs/jcoz-log.txt");
+std::shared_ptr<spdlog::logger> Profiler::logger = spdlog::basic_logger_mt("basic_logger", OUTPUT_LOG_FILENAME);
 
 /**
  * Wrapper function for sleeping
@@ -714,14 +704,14 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   }
 
   JVMPI_CallTrace trace;
-  JVMPI_CallFrame frames[kMaxFramesToCapture];
+  JVMPI_CallFrame frames[KMAX_FRAMES_TO_CAPTURE];
   // We have to set every byte to 0 instead of just initializing the
   // individual fields, because the structs might be padded, and we
   // use memcmp on it later.  We can't use memset, because it isn't
   // async-safe.
   char *base = reinterpret_cast<char *>(frames);
   for (char *p = base;
-       p < base + sizeof(JVMPI_CallFrame) * kMaxFramesToCapture; p++)
+       p < base + sizeof(JVMPI_CallFrame) * KMAX_FRAMES_TO_CAPTURE; p++)
   {
     *p = 0;
   }
@@ -730,12 +720,12 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   trace.env_id = env;
 
   ASGCTType asgct = Asgct::GetAsgct();
-  (*asgct)(&trace, kMaxFramesToCapture, context);
+  (*asgct)(&trace, KMAX_FRAMES_TO_CAPTURE, context);
 
   if (trace.num_frames < 0)
   {
     int idx = -trace.num_frames;
-    if (idx > kNumCallTraceErrors)
+    if (idx > KNUM_CALL_TRACE_ERROS)
     {
       return;
     }

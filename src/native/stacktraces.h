@@ -51,8 +51,6 @@ typedef struct
 
 typedef void (*ASGCTType)(JVMPI_CallTrace *, jint, void *);
 
-const int kNumCallTraceErrors = 10;
-
 enum CallTraceErrors
 {
   // 0 is reserved for native stack traces.  This includes JIT and GC threads.
