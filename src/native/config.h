@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 // Logger level
-#include "spdlog/cfg/env.h"
+#include "spdlog/spdlog.h"
 const spdlog::level::level_enum profiler_log_level = spdlog::level::info;
 
 // ---------- PROFILER --------
