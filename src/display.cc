@@ -34,11 +34,14 @@
 #include <map>
 #include <vector>
 
-void StackTracesPrinter::PrintStackTraces(TraceData *traces, int length) {
+void StackTracesPrinter::PrintStackTraces(TraceData *traces, int length)
+{
   int count = 0;
   int total = 0;
-  for (int i = 0; i < length; i++) {
-    if (traces[i].count != 0) {
+  for (int i = 0; i < length; i++)
+  {
+    if (traces[i].count != 0)
+    {
       total += traces[i].count;
       count++;
       fprintf(file_, "%" PRIdPTR " ", traces[i].count);
@@ -52,24 +55,31 @@ void StackTracesPrinter::PrintStackTraces(TraceData *traces, int length) {
 typedef std::pair<jint, jmethodID> PairCallFrame;
 typedef std::pair<PairCallFrame, int> FrameCount;
 
-struct Sorter {
-  bool operator()(const FrameCount f1, const FrameCount f2) {
+struct Sorter
+{
+  bool operator()(const FrameCount f1, const FrameCount f2)
+  {
     return f1.second > f2.second;
   }
 };
 
-void StackTracesPrinter::PrintLeafHistogram(TraceData *traces, int length) {
+void StackTracesPrinter::PrintLeafHistogram(TraceData *traces, int length)
+{
   fprintf(file_, "\n\nHot methods:\n");
   std::map<PairCallFrame, int> hot_methods;
-  for (int i = 0; i < length; i++) {
-    if (traces[i].count != 0) {
+  for (int i = 0; i < length; i++)
+  {
+    if (traces[i].count != 0)
+    {
       JVMPI_CallTrace *t = &(traces[i].trace);
       JVMPI_CallFrame *f = t->frames;
       JVMPI_CallFrame *last_frame = f + t->num_frames;
-      while (f->lineno == -99 && f != last_frame) {
+      while (f->lineno == -99 && f != last_frame)
+      {
         f++;
       }
-      if (f == last_frame) {
+      if (f == last_frame)
+      {
         continue;
       }
 
@@ -83,7 +93,8 @@ void StackTracesPrinter::PrintLeafHistogram(TraceData *traces, int length) {
 
   sorted_methods.reserve(hot_methods.size());
 
-  for (auto method : hot_methods) {
+  for (auto method : hot_methods)
+  {
     sorted_methods.emplace_back(method.first, method.second);
   }
 
@@ -93,14 +104,16 @@ void StackTracesPrinter::PrintLeafHistogram(TraceData *traces, int length) {
   last.method_id = NULL;
   last.lineno = 0;
 
-  for (auto method : sorted_methods) {
+  for (auto method : sorted_methods)
+  {
     int count = method.second;
     PairCallFrame *f = &(method.first);
     JVMPI_CallFrame curr_frame;
     curr_frame.lineno = f->first;
     curr_frame.method_id = f->second;
     if (curr_frame.lineno == last.lineno &&
-        curr_frame.method_id == last.method_id) {
+        curr_frame.method_id == last.method_id)
+    {
       continue;
     }
     fprintf(file_, "%10d ", count);
@@ -111,15 +124,19 @@ void StackTracesPrinter::PrintLeafHistogram(TraceData *traces, int length) {
 
 // This method changes the standard class signature "Lfoo/bar;" format
 // to a more readable "foo.bar" format.
-static void CleanJavaSignature(char *signature_ptr) {
-  size_t signature_length = strlen(signature_ptr);  // ugh!
-  if (signature_length < 3) {                    // I'm not going to even try.
+static void CleanJavaSignature(char *signature_ptr)
+{
+  size_t signature_length = strlen(signature_ptr); // ugh!
+  if (signature_length < 3)
+  { // I'm not going to even try.
     return;
   }
 
   signature_ptr[0] = ' ';
-  for (size_t i = 1; i < signature_length - 1; ++i) {
-    if (signature_ptr[i] == '/') {
+  for (size_t i = 1; i < signature_length - 1; ++i)
+  {
+    if (signature_ptr[i] == '/')
+    {
       signature_ptr[i] = '.';
     }
   }
@@ -128,41 +145,52 @@ static void CleanJavaSignature(char *signature_ptr) {
 
 // Given a method and a location, this method gets the line number.
 // Kind of expensive, comparatively.
-jint StackTracesPrinter::GetLineNumber(jmethodID method, jlocation location) {
+jint StackTracesPrinter::GetLineNumber(jmethodID method, jlocation location)
+{
   jint entry_count;
   JvmtiScopedPtr<jvmtiLineNumberEntry> table_ptr_ctr(jvmti_);
   jint line_number = -1;
 
   // Shortcut for native methods.
-  if (location == -1) {
+  if (location == -1)
+  {
     return -1;
   }
 
   int jvmti_error = jvmti_->GetLineNumberTable(method,
-      &entry_count,
-      table_ptr_ctr.GetRef());
+                                               &entry_count,
+                                               table_ptr_ctr.GetRef());
 
   // Go through all the line numbers...
-  if (JVMTI_ERROR_NONE != jvmti_error) {
+  if (JVMTI_ERROR_NONE != jvmti_error)
+  {
     table_ptr_ctr.AbandonBecauseOfError();
-  } else {
+  }
+  else
+  {
     jvmtiLineNumberEntry *table_ptr = table_ptr_ctr.Get();
-    if (entry_count > 1) {
+    if (entry_count > 1)
+    {
       jlocation last_location = table_ptr[0].start_location;
-      for (int l = 1; l < entry_count; l++) {
+      for (int l = 1; l < entry_count; l++)
+      {
         // ... and if you see one that is in the right place for your
         // location, you've found the line number!
         if ((location < table_ptr[l].start_location) &&
-            (location >= last_location)) {
-          line_number = table_ptr[l-1].line_number;
+            (location >= last_location))
+        {
+          line_number = table_ptr[l - 1].line_number;
           return line_number;
         }
         last_location = table_ptr[l].start_location;
       }
-      if (location >= last_location) {
+      if (location >= last_location)
+      {
         return table_ptr[entry_count - 1].line_number;
       }
-    } else if (entry_count == 1) {
+    }
+    else if (entry_count == 1)
+    {
       line_number = table_ptr[0].line_number;
     }
   }
@@ -170,27 +198,31 @@ jint StackTracesPrinter::GetLineNumber(jmethodID method, jlocation location) {
 }
 
 bool StackTracesPrinter::GetStackFrameElements(JVMPI_CallFrame *frame,
-    string *file_name,
-    string *class_name,
-    string *method_name,
-    int *line_number) {
+                                               string *file_name,
+                                               string *class_name,
+                                               string *method_name,
+                                               int *line_number)
+{
   jint error;
   JvmtiScopedPtr<char> name_ptr(jvmti_);
 
   // Get method name, put it in name_ptr
   if ((error = jvmti_->GetMethodName(frame->method_id, name_ptr.GetRef(), NULL,
-          NULL)) !=
-      JVMTI_ERROR_NONE) {
+                                     NULL)) !=
+      JVMTI_ERROR_NONE)
+  {
     name_ptr.AbandonBecauseOfError();
-    if (error == JVMTI_ERROR_INVALID_METHODID) {
+    if (error == JVMTI_ERROR_INVALID_METHODID)
+    {
       static int once = 0;
-      if (!once) {
+      if (!once)
+      {
         once = 1;
         fprintf(stderr, "One of your monitoring interfaces "
-            "is having trouble resolving its stack traces.  "
-            "GetMethodName on a jmethodID involved in a stacktrace "
-            "resulted in an INVALID_METHODID error which usually "
-            "indicates its declaring class has been unloaded.\n");
+                        "is having trouble resolving its stack traces.  "
+                        "GetMethodName on a jmethodID involved in a stacktrace "
+                        "resulted in an INVALID_METHODID error which usually "
+                        "indicates its declaring class has been unloaded.\n");
         fprintf(stderr, "Unexpected JVMTI error %d in GetMethodName", error);
       }
     }
@@ -213,10 +245,13 @@ bool StackTracesPrinter::GetStackFrameElements(JVMPI_CallFrame *frame,
   JvmtiScopedPtr<char> source_name_ptr(jvmti_);
   static char file_unknown[] = "UnknownFile";
   if (JVMTI_ERROR_NONE !=
-      jvmti_->GetSourceFileName(declaring_class, source_name_ptr.GetRef())) {
+      jvmti_->GetSourceFileName(declaring_class, source_name_ptr.GetRef()))
+  {
     source_name_ptr.AbandonBecauseOfError();
     filename = file_unknown;
-  } else {
+  }
+  else
+  {
     filename = source_name_ptr.Get();
   }
 
@@ -227,7 +262,8 @@ bool StackTracesPrinter::GetStackFrameElements(JVMPI_CallFrame *frame,
   *method_name = name_ptr.Get();
   *file_name = filename;
 
-  if (line_number != NULL) {
+  if (line_number != NULL)
+  {
     // TODO(jeremymanson): is frame->lineno correct?  GetLineNumber
     // expects a BCI.
     *line_number = GetLineNumber(frame->method_id, frame->lineno);
@@ -236,8 +272,10 @@ bool StackTracesPrinter::GetStackFrameElements(JVMPI_CallFrame *frame,
   return true;
 }
 
-bool StackTracesPrinter::PrintStackFrame(JVMPI_CallFrame *frame) {
-  if (frame->lineno == -99) {
+bool StackTracesPrinter::PrintStackFrame(JVMPI_CallFrame *frame)
+{
+  if (frame->lineno == -99)
+  {
     // This should never happen in a stock hotspot build
     return false;
   }
@@ -245,21 +283,24 @@ bool StackTracesPrinter::PrintStackFrame(JVMPI_CallFrame *frame) {
   string method_name, class_name, file_name;
   int line_num;
   GetStackFrameElements(frame, &file_name, &class_name, &method_name,
-      &line_num);
+                        &line_num);
   fprintf(file_, "\t%s.%s(%s:%d)\n", class_name.c_str(), method_name.c_str(),
-      file_name.c_str(), line_num);
+          file_name.c_str(), line_num);
   return true;
 }
 
-void StackTracesPrinter::PrintStackTrace(TraceData *trace) {
+void StackTracesPrinter::PrintStackTrace(TraceData *trace)
+{
   JVMPI_CallTrace *t = &(trace->trace);
-  if (t->num_frames < 0) {
+  if (t->num_frames < 0)
+  {
     // Error trace - don't bother to print it.
     return;
   }
 
   fprintf(file_, "%d ", t->num_frames);
-  for (int i = 0; i < t->num_frames; i++) {
+  for (int i = 0; i < t->num_frames; i++)
+  {
     JVMPI_CallFrame *curr_frame = &(t->frames[i]);
     PrintStackFrame(curr_frame);
   }
