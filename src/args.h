@@ -16,6 +16,7 @@ enum profiler_option
   _warmup,
   _fix_exp,
   _logging_level,
+  _output_file,
 };
 
 namespace agent_args
@@ -36,6 +37,8 @@ namespace agent_args
       return _fix_exp;
     if (option == "logging-level")
       return _logging_level;
+    if (option == "output-file")
+      return _output_file;
 
     return _unknown;
   }

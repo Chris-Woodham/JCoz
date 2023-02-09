@@ -24,6 +24,7 @@
 #include <jvmti.h>
 #include <jni.h>
 #include <stdint.h>
+#include <string>
 #ifdef __APPLE__
 #include <pthread.h>
 #endif
@@ -40,8 +41,8 @@
 // If full path is specified (e.g. "/home/ubuntu/log.txt"), file will be created in path specified
 #define PROFILER_LOG_FILE "profiler_log.txt"
 
-// Location where the data are dumped.
-static const char kDefaultOutFile[] = "jcoz_output.coz";
+// File to which output data are written.
+static std::string kOutputFile;
 
 // --- Experiment Time Settings
 
