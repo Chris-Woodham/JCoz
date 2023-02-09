@@ -31,6 +31,15 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+// ----------------- SETTINGS ---------------------
+
+// File path to profiler log
+// If full path is not specified (e.g. "log.txt"), log file will be created in current directory
+// If full path is specified (e.g. "/home/ubuntu/log.txt"), file will be created in path specified
+#define PROFILER_LOG_FILE "profiler_log.txt"
+
+// ----------------- Useful Macros -----------------
+
 #define AGENTEXPORT __attribute__((visibility("default"))) JNIEXPORT
 
 // Gets us around -Wunused-parameter

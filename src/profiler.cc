@@ -108,7 +108,7 @@ bool Profiler::fix_exp = false;
 nanoseconds_type startup_time;
 
 // Logger
-std::shared_ptr<spdlog::logger> Profiler::logger = spdlog::basic_logger_mt("basic_logger", "log.txt");
+std::shared_ptr<spdlog::logger> Profiler::logger = spdlog::basic_logger_mt("basic_logger", PROFILER_LOG_FILE);
 
 void Profiler::ParseOptions(const char *options)
 {
