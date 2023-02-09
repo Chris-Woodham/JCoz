@@ -15,6 +15,7 @@
 
 build-64/
 cmake-build-debug/
+rsync*
 .idea/
 .vscode/
 *.coz
