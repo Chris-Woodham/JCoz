@@ -40,6 +40,9 @@
 // If full path is specified (e.g. "/home/ubuntu/log.txt"), file will be created in path specified
 #define PROFILER_LOG_FILE "profiler_log.txt"
 
+// Location where the data are dumped.
+static const char kDefaultOutFile[] = "jcoz_output.coz";
+
 // --- Experiment Time Settings
 
 // Minimum experiment length in milliseconds
@@ -52,6 +55,19 @@
 #define HITS_TO_DEC_EXP_TIME 20
 // Each time the experiment time is increased, it is multiplied by this factor. Divided for decrease
 #define EXP_TIME_FACTOR 2
+
+// --- Profiler Call Frame Settings
+
+// Maximum number JVMPI_CallFrame in static_call_frames - a shared and unsafe variable
+// Contents are copied to the variable local to profiler thread (Profiler.call_frames)
+#define NUM_STATIC_CALL_FRAMES 200
+
+// --- Profiler::Handle() Settings
+
+// Maximum number of frames to store from the stack traces sampled.
+static const int kMaxFramesToCapture = 128;
+
+const int kNumCallTraceErrors = 10;
 
 // ----------------- Useful Macros -----------------
 
@@ -289,20 +305,6 @@ inline intptr_t NoBarrier_AtomicIncrement(volatile intptr_t *ptr,
 
 #undef __CAS_INSTR
 #undef __ADD_INSTR
-
-// Things that should probably be user-configurable
-
-// Number of times per second that we profile
-static const int kNumInterrupts = 100;
-
-// Maximum number of stack traces
-static const int kMaxStackTraces = 3000;
-
-// Maximum number of frames to store from the stack traces sampled.
-static const int kMaxFramesToCapture = 128;
-
-// Location where the data are dumped.
-static const char kDefaultOutFile[] = "jcoz_output.coz";
 
 class Globals
 {

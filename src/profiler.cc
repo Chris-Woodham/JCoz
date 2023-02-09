@@ -55,8 +55,6 @@ __thread JNIEnv *Accessors::env_;
 
 #define SIGNAL_FREQ 1000000L
 
-#define NUM_CALL_FRAMES 200
-
 // Maximum possible bytecode index (JVMS14, 4.7.3)
 #define MAX_BCI 65535
 
@@ -100,7 +98,7 @@ std::vector<std::string> Profiler::search_scopes;
 std::vector<std::string> Profiler::ignored_scopes;
 
 static std::atomic<int> call_index(0);
-static JVMPI_CallFrame static_call_frames[NUM_CALL_FRAMES];
+static JVMPI_CallFrame static_call_frames[NUM_STATIC_CALL_FRAMES];
 
 bool Profiler::fix_exp = false;
 
@@ -474,7 +472,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
     while (!__sync_bool_compare_and_swap(&frame_lock, 0, 1))
       ;
     std::atomic_thread_fence(std::memory_order_acquire);
-    for (int i = 0; (i < call_index) && (i < NUM_CALL_FRAMES); i++)
+    for (int i = 0; (i < call_index) && (i < NUM_STATIC_CALL_FRAMES); i++)
     {
       call_frames.push_back(static_call_frames[i]);
     }
@@ -563,7 +561,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       while (!__sync_bool_compare_and_swap(&frame_lock, 0, 1))
         ;
       std::atomic_thread_fence(std::memory_order_acquire);
-      memset(static_call_frames, 0, NUM_CALL_FRAMES * sizeof(JVMPI_CallFrame));
+      memset(static_call_frames, 0, NUM_STATIC_CALL_FRAMES * sizeof(JVMPI_CallFrame));
       frame_lock = 0;
       std::atomic_thread_fence(std::memory_order_release);
 
@@ -876,7 +874,7 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
           ;
         std::atomic_thread_fence(std::memory_order_acquire);
         int index = call_index.fetch_add(1);
-        if (index < NUM_CALL_FRAMES)
+        if (index < NUM_STATIC_CALL_FRAMES)
         {
           static_call_frames[index] = curr_frame;
         }
