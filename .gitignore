@@ -13,26 +13,45 @@
 # You should have received a copy of the GNU General Public License
 # along with JCoz.  If not, see <https://www.gnu.org/licenses/>.
 
-bin/
 build-64/
-build/
-jcoz/
 cmake-build-debug/
-out
-questions
-src/java/target
-*.class
+.idea/
+.vscode/
 *.coz
-*.iml
-*.jar
-*.job.*
 *.log
-*.project
-*.swp
 *.txt
-.classpath
-.cproject
-.idea
-.project
-.scannerwork
-.settings
+
+##### Copied from C++ gitignore
+##### https://github.com/github/gitignore/blob/4488915eec0b3a45b5c63ead28f286819c0917de/C++.gitignore
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
