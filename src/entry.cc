@@ -233,9 +233,6 @@ void JNICALL OnVMDeath(jvmtiEnv *jvmti_env, JNIEnv *jni_env)
   IMPLICITLY_USE(jvmti_env);
   IMPLICITLY_USE(jni_env);
 
-  //  prof->printInScopeLineNumberMapping();
-
-  // prof->clearProgressPoint();
   prof->getLogger()->info("On VM death. Stopping profiler...");
   prof->Stop();
   updateEventsEnabledState(prof->getJVMTI(), JVMTI_DISABLE);
@@ -329,41 +326,6 @@ static bool RegisterJvmti(jvmtiEnv *jvmti)
   logger->info("JVMTI successfully registered and event notifications successfully enabled");
 
   return true;
-}
-
-#define POSITIVE(x) (static_cast<size_t>(x > 0 ? x : 0))
-
-static void SetFileFromOption(char *equals)
-{
-  char *name_begin = equals + 1;
-  char *name_end;
-  if ((name_end = strchr(equals, ',')) == NULL)
-  {
-    name_end = equals + strlen(equals);
-  }
-  size_t len = POSITIVE(name_end - name_begin);
-  char *file_name = new char[len];
-  strncpy(file_name, name_begin, len);
-  if (strcmp(file_name, "stderr") == 0)
-  {
-    Globals::OutFile = stderr;
-  }
-  else if (strcmp(file_name, "stdout") == 0)
-  {
-    Globals::OutFile = stdout;
-  }
-  else
-  {
-    Globals::OutFile = fopen(file_name, "w+");
-    if (Globals::OutFile == NULL)
-    {
-      fprintf(stderr, "Could not open file %s: ", file_name);
-      perror(NULL);
-      exit(1);
-    }
-  }
-
-  delete[] file_name;
 }
 
 AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options,
