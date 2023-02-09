@@ -53,9 +53,6 @@ __thread JNIEnv *Accessors::env_;
 #endif
 
 #define SIGNAL_FREQ 1000000L
-#define MIN_EXP_TIME 5000
-
-#define NUM_CALL_FRAMES 200
 
 // Maximum possible bytecode index (JVMS14, 4.7.3)
 #define MAX_BCI 65535
@@ -100,7 +97,7 @@ std::vector<std::string> Profiler::search_scopes;
 std::vector<std::string> Profiler::ignored_scopes;
 
 static std::atomic<int> call_index(0);
-static JVMPI_CallFrame static_call_frames[NUM_CALL_FRAMES];
+static JVMPI_CallFrame static_call_frames[NUM_STATIC_CALL_FRAMES];
 
 bool Profiler::fix_exp = false;
 
@@ -331,6 +328,29 @@ float Profiler::calculate_random_speedup()
   }
 }
 
+void Profiler::update_experiment_length()
+{
+  // Fixed experiment length => no need to update experiment length
+  if (fix_exp)
+    return;
+
+  if (current_experiment.points_hit <= HITS_TO_INC_EXP_TIME)
+  {
+    if (experiment_time * 2 > MAX_EXP_TIME)
+    {
+      experiment_time = MAX_EXP_TIME;
+    }
+    else
+    {
+      experiment_time *= EXP_TIME_FACTOR;
+    }
+  }
+  else if ((experiment_time > MIN_EXP_TIME) && (current_experiment.points_hit >= HITS_TO_DEC_EXP_TIME))
+  {
+    experiment_time /= EXP_TIME_FACTOR;
+  }
+}
+
 void Profiler::runExperiment(JNIEnv *jni_env)
 {
   logger->info("Running experiment");
@@ -380,17 +400,7 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   // printf("Total experiment delay: %ld, total duration: %ld\n", current_experiment.delay, current_experiment.duration);
 
   // Maybe update the experiment length
-  if (!fix_exp)
-  {
-    if (current_experiment.points_hit <= 5)
-    {
-      experiment_time *= 2;
-    }
-    else if ((experiment_time > MIN_EXP_TIME) && (current_experiment.points_hit >= 20))
-    {
-      experiment_time /= 2;
-    }
-  }
+  Profiler::update_experiment_length();
 
   bci_hits::add_hit(sig, current_experiment.method_id, current_experiment.lineno, current_experiment.bci);
 
@@ -461,7 +471,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
     while (!__sync_bool_compare_and_swap(&frame_lock, 0, 1))
       ;
     std::atomic_thread_fence(std::memory_order_acquire);
-    for (int i = 0; (i < call_index) && (i < NUM_CALL_FRAMES); i++)
+    for (int i = 0; (i < call_index) && (i < NUM_STATIC_CALL_FRAMES); i++)
     {
       call_frames.push_back(static_call_frames[i]);
     }
@@ -550,7 +560,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       while (!__sync_bool_compare_and_swap(&frame_lock, 0, 1))
         ;
       std::atomic_thread_fence(std::memory_order_acquire);
-      memset(static_call_frames, 0, NUM_CALL_FRAMES * sizeof(JVMPI_CallFrame));
+      memset(static_call_frames, 0, NUM_STATIC_CALL_FRAMES * sizeof(JVMPI_CallFrame));
       frame_lock = 0;
       std::atomic_thread_fence(std::memory_order_release);
 
@@ -863,7 +873,7 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
           ;
         std::atomic_thread_fence(std::memory_order_acquire);
         int index = call_index.fetch_add(1);
-        if (index < NUM_CALL_FRAMES)
+        if (index < NUM_STATIC_CALL_FRAMES)
         {
           static_call_frames[index] = curr_frame;
         }

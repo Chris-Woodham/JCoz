@@ -51,7 +51,6 @@ typedef struct
 
 typedef void (*ASGCTType)(JVMPI_CallTrace *, jint, void *);
 
-const int kNumCallTraceErrors = 10;
 
 enum CallTraceErrors
 {
