@@ -45,7 +45,7 @@ jvmtiError run_profiler(JNIEnv* jni);
 void JNICALL OnThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env,
     jthread thread) {
   auto logger = prof->getLogger();
-  logger->info("OnThreadStart fired");
+  logger->debug("OnThreadStart fired");
   IMPLICITLY_USE(jvmti_env);
   IMPLICITLY_USE(thread);
   Accessors::SetCurrentJniEnv(jni_env);
@@ -78,7 +78,7 @@ void JNICALL OnClassLoad(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread,
 // to run profiler thread
 jthread create_thread(JNIEnv *jni_env) {
   auto logger = prof->getLogger();
-  logger->info("Creating a thread in create_thread");
+  logger->debug("Creating a thread in create_thread");
   jclass cls = jni_env->FindClass("java/lang/Thread");
   if( cls == NULL ) {
     exit(1);
@@ -102,7 +102,7 @@ jthread create_thread(JNIEnv *jni_env) {
  */
 static bool updateEventsEnabledState(jvmtiEnv *jvmti, jvmtiEventMode enabledState) {
   auto logger = prof->getLogger();
-  logger->info("Setting CLASS_PREPARE to enabled");
+  logger->debug("Setting CLASS_PREPARE to enabled");
   JVMTI_ERROR_1(
       (jvmti->SetEventNotificationMode(enabledState, JVMTI_EVENT_CLASS_PREPARE, NULL)),
       false);
@@ -156,12 +156,12 @@ void CreateJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass) {
     return;
   }
   auto logger = prof->getLogger();
-  logger->info("In CreateJMethodIDsForClass start");
+  logger->trace("In CreateJMethodIDsForClass start");
   bool releaseLock = acquireCreateLock();
   jint method_count;
   JvmtiScopedPtr<jmethodID> methods(jvmti);
   jvmtiError e = jvmti->GetClassMethods(klass, &method_count, methods.GetRef());
-  logger->info("Got class methods from the JVM");
+  logger->trace("Got class methods from the JVM");
   if (e != JVMTI_ERROR_NONE) {
     JvmtiScopedPtr<char> ksig(jvmti);
     JVMTI_ERROR((jvmti->GetClassSignature(klass, ksig.GetRef(), NULL)));
@@ -170,7 +170,7 @@ void CreateJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass) {
     JvmtiScopedPtr<char> ksig(jvmti);
     jvmti->GetClassSignature(klass, ksig.GetRef(), NULL);
 
-    logger->info(
+    logger->debug(
         "Creating JMethod IDs. [Class: {class}]",
         fmt::arg("class", ksig.Get()));
     if (is_in_allowed_scope(ksig.Get()))
@@ -267,7 +267,7 @@ static bool PrepareJvmti(jvmtiEnv *jvmti) {
 static bool RegisterJvmti(jvmtiEnv *jvmti) {
   // Create the list of callbacks to be called on given events.
   auto logger = prof->getLogger();
-  logger->info("Registering jvmtiEventCallbacks in RegisterJvmti");
+  logger->trace("Registering jvmtiEventCallbacks in RegisterJvmti");
   jvmtiEventCallbacks *callbacks = new jvmtiEventCallbacks();
   memset(callbacks, 0, sizeof(jvmtiEventCallbacks));
 
@@ -292,13 +292,13 @@ static bool RegisterJvmti(jvmtiEnv *jvmti) {
 
   // Enable the callbacks to be triggered when the events occur.
   // Events are enumerated in jvmstatagent.h
-  logger->info("Setting event notification mode to JVMTI_ENABLE in Register Jvmti");
+  logger->debug("Setting event notification mode to JVMTI_ENABLE in Register Jvmti");
   for (int i = 0; i < num_events; i++) {
     JVMTI_ERROR_1(
         (jvmti->SetEventNotificationMode(JVMTI_ENABLE, events[i], NULL)),
         false);
   }
-  logger->info("Event notifications successfully enabled");
+  logger->info("JVMTI successfully registered and event notifications successfully enabled");
 
   return true;
 }
@@ -385,7 +385,7 @@ jvmtiError run_profiler(JNIEnv* jni)
     jclass next_loaded_class = loaded_classes[i];
     JvmtiScopedPtr<char> ksig(jvmti);
     jvmti->GetClassSignature(next_loaded_class, ksig.GetRef(), nullptr);
-    prof->getLogger()->info("Loading class {}", ksig.Get());
+    prof->getLogger()->debug("Loading class {}", ksig.Get());
     CreateJMethodIDsForClass(jvmti, next_loaded_class);
   }
 

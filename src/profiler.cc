@@ -222,9 +222,10 @@ void Profiler::ParseOptions(const char *options)
                  "\tignored scopes: {}\n"
                  "\twarmup: {}us\n"
                  "\tend-to-end: {}\n"
-                 "\tfixed experiment duration: {}",
+                 "\tfixed experiment duration: {}\n"
+                 "\tLogging level: {}",
                  progress_class, progress_point->lineno, joint_search_scopes.str(), joint_ignored_scopes.str(),
-                 warmup_time, end_to_end, fix_exp);
+                 warmup_time, end_to_end, fix_exp, spdlog::level::to_string_view(logger->level()));
     if (search_scopes.empty() || (!end_to_end && (progress_class.empty() || progress_point->lineno == -1)))
     {
         agent_args::report_error("Missing package, progress class, or progress point");
@@ -388,7 +389,7 @@ void Profiler::runExperiment(JNIEnv * jni_env) {
 
     delete[] current_experiment.location_ranges;
 
-    logger->info("Finished experiment, flushed logs, and delete current location ranges.");
+    logger->debug("Finished experiment, flushed logs, and delete current location ranges.");
 }
 
 void JNICALL
@@ -408,7 +409,7 @@ std::atomic_thread_fence(std::memory_order_release);
 prof_ready = true;
 
 while (_running) {
-logger->info("Starting new agent thread _running loop...");
+logger->debug("Starting new agent thread _running loop...");
 // 15 * SIGNAL_FREQ with randomization should give us roughly
 // the same number of iterations as doing 10 * SIGNAL_FREQ without
 // randomization.
@@ -420,7 +421,7 @@ long curr_sleep = 2 * SIGNAL_FREQ - (rand() % SIGNAL_FREQ);
 jcoz_sleep(curr_sleep);
 signal_user_threads();
 total_accrued_time += curr_sleep;
-logger->debug("Slept for {sleep_time} time. {remaining_time} Remaining.",
+logger->trace("Slept for {sleep_time} time. {remaining_time} Remaining.",
 fmt::arg("sleep_time", curr_sleep),
 fmt::arg("remaining_time", total_needed_time - total_accrued_time));
 }
@@ -513,13 +514,13 @@ frame_lock = 0;
 std::atomic_thread_fence(std::memory_order_release);
 
 jvmti->Deallocate((unsigned char *)entries);
-logger->debug("Finished clearing frames and deallocating entries...");
+logger->trace("Finished clearing frames and deallocating entries...");
 } else {
-logger->info("No frames found in agent thread. Trying sampling loop again...");
+logger->debug("No frames found in agent thread. Trying sampling loop again...");
 }
 }
 
-logger->info("Profiler done running...");
+logger->info("Profiler done running");
 profile_done = true;
 }
 
@@ -613,13 +614,13 @@ bool inline Profiler::frameInScope(JVMPI_CallFrame &curr_frame) {
 }
 
 void Profiler::addInScopeMethods(jint method_count, jmethodID *methods) {
-    logger->info("Adding {:d} in scope methods\n", method_count);
+    logger->debug("Adding {:d} in scope methods\n", method_count);
     while (!__sync_bool_compare_and_swap(&in_scope_lock, 0, pthread_self()))
         ;
     std::atomic_thread_fence(std::memory_order_acquire);
     for (int i = 0; i < method_count; i++) {
         void *method = (void *)methods[i];
-        logger->info("Adding in scope method {}\n", method);
+        logger->trace("Adding in scope method {}\n", method);
         in_scope_ids.insert(method);
     }
     in_scope_lock = 0;
@@ -627,7 +628,7 @@ void Profiler::addInScopeMethods(jint method_count, jmethodID *methods) {
 }
 
 void Profiler::clearInScopeMethods(){
-    logger->info("Clearing current in scope methods.");
+    logger->debug("Clearing current in scope methods.");
     while (!__sync_bool_compare_and_swap(&in_scope_lock, 0, pthread_self()));
     in_scope_ids.clear();
     in_scope_lock = 0;
@@ -899,7 +900,7 @@ void Profiler::cleanSignature(char *sig) {
 
 void Profiler::clearProgressPoint() {
     if( !end_to_end && (progress_point->method_id != nullptr) ) {
-        logger->info("Clearing breakpoint");
+        logger->info("Clearing progress point");
         jvmti->ClearBreakpoint(progress_point->method_id, progress_point->location);
         progress_point->method_id = nullptr;
     }
