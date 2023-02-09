@@ -41,7 +41,6 @@
 #include <sstream>
 #include <iterator>
 
-#include "display.h"
 #include "globals.h"
 #include "bci_hits.h"
 #include "args.h"
