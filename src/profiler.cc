@@ -129,6 +129,8 @@ void Profiler::ParseOptions(const char *options)
   progress_point->lineno = -1;
   progress_point->method_id = nullptr;
 
+  bool isLoggingLevelSet = false;
+
   // split underscore delimited line into options
   // (we can't use semicolon because bash is dumb)
   while (std::getline(ss, item, '_')) {
@@ -181,7 +183,8 @@ void Profiler::ParseOptions(const char *options)
       }
 
       case _logging_level: {
-        Profiler::logger->set_level(agent_args::parse_logging_level(value));
+        logger->set_level(agent_args::parse_logging_level(value));
+        isLoggingLevelSet = true;
         break;
       }
 
@@ -198,6 +201,10 @@ void Profiler::ParseOptions(const char *options)
         fix_exp = true;
         break;
     }
+  }
+
+  if (isLoggingLevelSet) {
+    logger->info("Logging level not specified in options, default info level used");
   }
 
   const char *const delim = ", ";

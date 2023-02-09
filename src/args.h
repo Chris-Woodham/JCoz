@@ -33,6 +33,24 @@ namespace agent_args
     return _unknown;
   }
 
+  void print_usage()
+  {
+    std::cout
+      << "usage: java -agentpath:<absolute_path_to_agent>="
+      << "pkg=<package_name>_"
+      << "progress-point=<class:line_no>_"
+      << "end-to-end (optional)_"
+      << "warmup=<warmup_time_ms> (optional - default 5000 ms)"
+      << std::endl;
+  }
+
+  void report_error(const char *message)
+  {
+    std::cerr << message << std::endl;
+    print_usage();
+    exit(1);
+  }
+
   spdlog::level::level_enum parse_logging_level(std::string logging_level_input) {
       switch (logging_level_input.front())
       {
@@ -65,27 +83,9 @@ namespace agent_args
               return spdlog::level::off;
           break;
       default:
-          report_error(fmt::format("Invalid logging level passed as input: {}", logging_level_input).c_str());
+          agent_args::report_error(fmt::format("Invalid logging level passed as input: {}", logging_level_input).c_str());
       }
-      report_error(fmt::format("Invalid logging level passed as input: {}", logging_level_input).c_str());
-  }
-
-  void print_usage()
-  {
-    std::cout
-      << "usage: java -agentpath:<absolute_path_to_agent>="
-      << "pkg=<package_name>_"
-      << "progress-point=<class:line_no>_"
-      << "end-to-end (optional)_"
-      << "warmup=<warmup_time_ms> (optional - default 5000 ms)"
-      << std::endl;
-  }
-
-  void report_error(const char *message)
-  {
-    std::cerr << message << std::endl;
-    print_usage();
-    exit(1);
+      agent_args::report_error(fmt::format("Invalid logging level passed as input: {}", logging_level_input).c_str());
   }
 } // namespace agent_args
 
