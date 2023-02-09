@@ -124,6 +124,7 @@ void Profiler::ParseOptions(const char *options)
   progress_point->method_id = nullptr;
 
   bool isLoggingLevelSet = false;
+  bool isOutputFileSet = false;
 
   // split underscore delimited line into options
   // (we can't use semicolon because bash is dumb)
@@ -184,6 +185,11 @@ void Profiler::ParseOptions(const char *options)
       break;
     }
 
+    case _output_file:
+      kOutputFile = value;
+      isOutputFileSet = true;
+      break;
+
     case _end_to_end:
       end_to_end = true;
       break;
@@ -202,6 +208,11 @@ void Profiler::ParseOptions(const char *options)
   if (!isLoggingLevelSet)
   {
     logger->info("Logging level not specified in options, default info level used");
+  }
+
+  if (!isOutputFileSet)
+  {
+    kOutputFile = "jcoz-output.coz";
   }
 
   const char *const delim = ", ";
@@ -414,7 +425,7 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   experiment_data << "experiment\tselected=" << sig << ":" << current_experiment.lineno << "\tspeedup=" << current_experiment.speedup << "\tduration=" << current_experiment.duration << "\n"
                   << "progress-point\tname=end-to-end\ttype=source\tdelta=" << current_experiment.points_hit << "\n";
   std::ofstream output_file;
-  output_file.open(kDefaultOutFile, std::ios_base::app);
+  output_file.open(kOutputFile.data(), std::ios_base::app);
   output_file << experiment_data.rdbuf();
   output_file.close();
 
