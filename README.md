@@ -40,7 +40,7 @@ The `-agentpath` argument has the following format:
 For example, to run profiler on progress point `com.example.MyClass:42`, search scope `java.util` and scopes `java.util.concurrent` and `java.util.stream`, the argument will be
 
 ```
--agentpath:/path/to/liblagent=progress-point=com.example.MyClass:42_search=java.util_ignore=java.util.concurrent|java.util.stream
+-agentpath:/path/to/liblagent=progress-point=Lcom/example/MyClass:42_search=java.util_ignore=java.util.concurrent|java.util.stream
 ```
 
 If program crashes immediately, make sure the version of jvm which will run your application is the same as the path to `path_to_java/lib` or `path_to_java/lib/server` in `LD_LIBRARY_PATH/DYLD_LIBRARY_PATH`. It might be that agent is unable to find `libjvm.so`/`libjvm.dylib` library.
