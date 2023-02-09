@@ -426,6 +426,24 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   logger->debug("Finished experiment, flushed logs, and delete current location ranges.");
 }
 
+// == and < operators for JVMPICallFrame - needed for sort and unique
+bool operator<(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs)
+{
+  if (lhs.method_id == rhs.method_id)
+  {
+    return lhs.lineno < rhs.lineno;
+  }
+  else
+  {
+    return lhs.method_id < rhs.method_id;
+  }
+}
+
+bool operator==(const JVMPI_CallFrame &lhs, const JVMPI_CallFrame &rhs)
+{
+  return lhs.method_id == rhs.method_id && lhs.lineno == rhs.lineno;
+}
+
 void JNICALL
 Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
 {
@@ -479,10 +497,15 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
     frame_lock = 0;
     std::atomic_thread_fence(std::memory_order_release);
 
+    // Filter `call_frames` such that it only contains unique JVMPI_CallFrames
     if (call_frames.size() > 0)
     {
-      logger->debug("Had {} call frames. Checking for in scope call frame...", call_frames.size());
       call_index = 0;
+      logger->trace("Profiler::runAgentThread() - Found {} call frames", call_frames.size());
+      std::sort(call_frames.begin(), call_frames.end());
+      auto last = std::unique(call_frames.begin(), call_frames.end());
+      call_frames.erase(last, call_frames.end());
+      logger->trace("Profiler::runAgentThread() - Found {} unique call frames", call_frames.size());
       std::random_shuffle(call_frames.begin(), call_frames.end());
       JVMPI_CallFrame exp_frame;
       jint num_entries;
