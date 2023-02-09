@@ -90,32 +90,5 @@ native: $(OBJECTS)
 	  -o $(BUILD_DIR)/$(TARGET) \
 	  -Bsymbolic $(OBJECTS) $(LIBS)
 
-java:
-	mvn -f src/java/pom.xml install
-
-tests: java
-	javac src/java/src/test/java/test/*.java -cp src/java/target/client*dependencies.jar
-
 clean:
 	rm -rf $(BUILD_DIR)/*
-	rm -rf src/java/src/test/java/test/*.class
-	rm -rf src/java/target
-
-run-workload:
-	cd src/java/src/test/java/; \
-	java \
-	  -agentpath:$(BUILD_DIR)/liblagent.so \
-	  -cp $$(readlink -f ../../../target/client*dependencies.jar):. \
-	  test.TestThreadSerial --fast
-
-run-rmi-host:
-	java \
-	  -cp $$(readlink -f ./src/java/target/client-*-jar-with-dependencies.jar):$(JAVA_HOME)/lib/tools.jar \
-	  jcoz.service.JCozService
-
-run-profiler:
-	cd src/java/src/test/java/; \
-	java \
-	  -agentpath:$(BUILD_DIR)/liblagent.so \
-	  -cp $$(readlink -f ../../../target/client*dependencies.jar):. \
-	  test.JCozServiceTest
