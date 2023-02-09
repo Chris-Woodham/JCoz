@@ -1,17 +1,18 @@
 [![Join the chat at https://gitter.im/JCoz-profiler/community](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/JCoz-profiler/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # Overview
+
 JCoz is the world's first causal profiler for Java (and eventually all JVM) programs. It was inspired by [coz](https://github.com/plasma-umass/coz), the original causal profiler.
 
 For documentation, including installing, building, and using JCoz, please see our [Wiki page](https://github.com/Decave/JCoz/wiki) page.
 
 ## Dependencies
 
- - [spdlog](https://github.com/gabime/spdlog) (`0.11.0` or higher)
-   - `apt-get install libspdlog-dev` for debian/ubuntu
-   - `yum install spdlog-devel` for fedora/rhel/centos
- - make
- - jdk 1.8 (newer jdk's will result in a (maven) failure during make all)
+- [spdlog](https://github.com/gabime/spdlog) (`0.11.0` or higher)
+  - `apt-get install libspdlog-dev` for debian/ubuntu
+  - `yum install spdlog-devel` for fedora/rhel/centos
+- make
+- jdk, of course
 
 # Getting Started Tutorial
 
@@ -20,68 +21,33 @@ For documentation, including installing, building, and using JCoz, please see ou
 You can drive a basic test use case through the Makefile.
 
 Start by building everything from scratch:
-```
-$ make clean
-$ make all
-```
-
-Now, to get started, open three terminal windows:
 
 ```
-(1) $ make run-rmi-host
-(2) $ make run-workload
-(3) $ make run-profiler
+make clean
+make all
 ```
 
-From the third (profiler) window, after a few moments you will see some output
-appear:
+This will build a native agent, which can be found in `build-$BITS` directory.
+
+The `-agentpath` argument has the following format:
+
 ```
-(3)
-experiment	selected=test.TestThreadSerial:67	speedup=0.0	duration=20003047916
-progress-point	name=end-to-end	type=source	delta=0
-```
-This is the coz flat file format. Leave the application to run for a
-period of time, and you will see more profiling samples collected.
-
-If you've made it this far, congrats, you can proceed to running the CLI for
-a proper profiling run! The 'run-profiler' process should terminate after
-about 30 seconds.
-
-Unfortunately we do not have enough datapoints from a 30 second run to get
-sufficient confidence for coz to recommend the lines of code to improve.
-
-## Running the CLI
-
-Using the CLI, we can collect as many datapoints as we like. Keeping the RMI
-host and workload running, start the CLI. Check the PID of the monitored host
-with ps.
-```
-(3)
-$ CLIENT_JAR=./src/java/target/client-0.0.1-jar-with-dependencies.jar
-$ TOOLS_JAR=/usr/lib/jvm/java-8-openjdk-amd64/lib/tools.jar
-$ java -cp ${CLIENT_JAR}:${TOOLS_JAR} \
-    jcoz.client.cli.JCozCLI \
-    -c test.TestThreadSerial \
-    -l 57 \
-    -s test \
-    -p $PID_OF_WORKLOAD
-...
-experiment	selected=test.TestThreadSerial:62	speedup=0.6	duration=4747080912
-progress-point	name=end-to-end	type=source	delta=98
-experiment	selected=test.TestThreadSerial:73	speedup=0.45	duration=4647873501
-progress-point	name=end-to-end	type=source	delta=96
-experiment	selected=test.TestThreadSerial:73	speedup=0.0	duration=5002572016
-progress-point	name=end-to-end	type=source	delta=100
-experiment	selected=test.TestThreadSerial:62	speedup=0.35	duration=4858058541
-progress-point	name=end-to-end	type=source	delta=99
-...
+-agentpath:/path/to/liblagent=progress-point=<progress point class fqn>:<line number>
+    _search=<search scope name 1>|<search scope name 2>|...|<scope to ignore N>
+    _ignore=<scope to ignore 1>|<scope to ignore 2>|...|<scope to ignore M> 
 ```
 
-Results will start appearing in the profile output.
+For example, to run profiler on progress point `com.example.MyClass:42`, search scope `java.util` and scopes `java.util.concurrent` and `java.util.stream`, the argument will be
+
+```
+-agentpath:/path/to/liblagent=progress-point=com.example.MyClass:42_search=java.util_ignore=java.util.concurrent|java.util.stream
+```
+
+If program crashes immediately, make sure the version of jvm which will run your application is the same as the path to `path_to_java/lib` or `path_to_java/lib/server` in `LD_LIBRARY_PATH/DYLD_LIBRARY_PATH`. It might be that agent is unable to find `libjvm.so`/`libjvm.dylib` library.
 
 ## Getting a profiling visualisation
 
-Save the results you previously captured to a file `foo.coz` (you will have to manually remove "[main] INFO jcoz.client.cli.JCozCLI - Experiment: " from the console output to make the coz UI parse your input).
+Experiment results will be in file `output.coz`.
 
 Open the [coz UI here](https://plasma-umass.org/coz/), and upload the file and review the output.
 
