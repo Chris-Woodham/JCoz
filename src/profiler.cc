@@ -203,7 +203,7 @@ void Profiler::ParseOptions(const char *options)
     }
   }
 
-  if (isLoggingLevelSet) {
+  if (!isLoggingLevelSet) {
     logger->info("Logging level not specified in options, default info level used");
   }
 

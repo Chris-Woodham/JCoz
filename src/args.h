@@ -86,6 +86,8 @@ namespace agent_args
           agent_args::report_error(fmt::format("Invalid logging level passed as input: {}", logging_level_input).c_str());
       }
       agent_args::report_error(fmt::format("Invalid logging level passed as input: {}", logging_level_input).c_str());
+
+      return spdlog::level::off; // UNREACHABLE
   }
 } // namespace agent_args
 
