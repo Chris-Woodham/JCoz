@@ -97,8 +97,6 @@ public:
 
   void ParseOptions(const char *options);
 
-  static std::string &getPackage() { return package; }
-
   static std::string &getProgressClass() { return progress_class; }
 
   static std::shared_ptr<spdlog::logger> &getLogger() { return logger; };
@@ -130,8 +128,6 @@ public:
 
   static void clearProgressPoint();
 
-  static void printInScopeLineNumberMapping();
-
   static void HandleBreakpoint(
       jvmtiEnv *jvmti,
       JNIEnv *jni_env,
@@ -142,12 +138,6 @@ public:
   void setScope(std::string package);
 
   void setProgressPoint(std::string class_name, jint line_no);
-
-  void setMBeanObject(jobject mbean);
-
-  jobject getMBeanObject();
-
-  void clearMBeanObject();
 
   void setJNI(JNIEnv *jni);
 
@@ -177,10 +167,6 @@ private:
 
   static void add_search_scope(std::string &scope);
   static void add_ignored_scope(std::string &scope);
-
-  static jobject mbean;
-
-  static jmethodID mbean_cache_method_id;
 
   static std::unordered_set<void *> in_scope_ids;
 

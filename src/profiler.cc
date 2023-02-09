@@ -81,8 +81,6 @@ volatile bool Profiler::end_to_end = false;
 pthread_t Profiler::agent_pthread;
 std::atomic_bool Profiler::profile_done(false);
 unsigned long Profiler::experiment_time = MIN_EXP_TIME;
-jobject Profiler::mbean;
-jmethodID Profiler::mbean_cache_method_id;
 JNIEnv *Profiler::jni_;
 
 // How long should we wait before starting an experiment
@@ -749,43 +747,6 @@ void Profiler::addProgressPoint(jint method_count, jmethodID *methods)
   }
 }
 
-void Profiler::setMBeanObject(jobject mbean)
-{
-  if (jni_ == nullptr)
-  {
-    fprintf(stderr, "jni_ not set\n");
-    fflush(stderr);
-  }
-  Profiler::mbean = jni_->NewGlobalRef(mbean);
-  if (Profiler::mbean == nullptr)
-  {
-    fprintf(stderr, "error setting global ref\n");
-    fflush(stderr);
-  }
-  jclass mbeanClass = jni_->GetObjectClass(Profiler::mbean);
-  if (mbeanClass == nullptr)
-  {
-    fprintf(stderr, "could not get mbean class\n");
-    fflush(stderr);
-  }
-  mbean_cache_method_id = jni_->GetMethodID(mbeanClass, "cacheOutput", "(Ljava/lang/String;IFJJ)V");
-  if (Profiler::mbean_cache_method_id == nullptr)
-  {
-    fprintf(stderr, "could not get method id\n");
-    fflush(stderr);
-  }
-}
-
-jobject Profiler::getMBeanObject()
-{
-  return Profiler::mbean;
-}
-
-void Profiler::clearMBeanObject()
-{
-  jni_->DeleteGlobalRef(Profiler::mbean);
-}
-
 void Profiler::setJNI(JNIEnv *jni)
 {
   jni_ = jni;
@@ -971,31 +932,6 @@ char *Profiler::getClassFromMethodIDLocation(jmethodID id)
   }
 
   return sig;
-}
-
-void Profiler::printInScopeLineNumberMapping()
-{
-  for (auto id : in_scope_ids)
-  {
-    jmethodID mid = (jmethodID)id;
-    char *sig = getClassFromMethodIDLocation(mid);
-    char *name;
-    jvmti->GetMethodName(mid, &name, nullptr, nullptr);
-    printf("sig: %s method: %s\n", sig, name);
-    jint entry_count;
-    JvmtiScopedPtr<jvmtiLineNumberEntry> entries(jvmti);
-    jvmtiError err = jvmti->GetLineNumberTable(mid, &entry_count, entries.GetRef());
-    if (err != JVMTI_ERROR_NONE)
-    {
-      return;
-    }
-
-    for (int j = 0; j < entry_count; j++)
-    {
-      printf("start_location %ld , line_no: %d\n",
-             entries.Get()[j].start_location, entries.Get()[j].line_number);
-    }
-  }
 }
 
 void Profiler::cleanSignature(char *sig)
