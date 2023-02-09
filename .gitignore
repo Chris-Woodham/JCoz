@@ -17,6 +17,7 @@ bin/
 build-64/
 build/
 jcoz/
+cmake-build-debug/
 out
 questions
 src/java/target
