@@ -3,19 +3,19 @@
 #include <sstream>
 #include "spdlog/spdlog.h"
 
-void bci_hits::add_hit(char* class_fqn, jmethodID method_id, jint line_number, jint bci)
+void bci_hits::add_hit(char *class_fqn, jmethodID method_id, jint line_number, jint bci)
 {
   _freqs[method_id][line_number][bci]++;
   _declaring_classes[method_id] = class_fqn;
 }
 
-std::vector<std::string> bci_hits::create_dump(jvmtiEnv* dealloc_jvmti)
+std::vector<std::string> bci_hits::create_dump(jvmtiEnv *dealloc_jvmti)
 {
   std::vector<std::string> result;
   result.emplace_back("Bytecode index hits:");
   for (auto method_it = _freqs.begin(); method_it != _freqs.end(); ++method_it)
   {
-    char* class_fqn = _declaring_classes[method_it->first];
+    char *class_fqn = _declaring_classes[method_it->first];
     result.push_back(fmt::format("\tFor class {}:", class_fqn));
     for (auto line_it = method_it->second.begin(); line_it != method_it->second.end(); ++line_it)
     {
@@ -28,7 +28,7 @@ std::vector<std::string> bci_hits::create_dump(jvmtiEnv* dealloc_jvmti)
       }
       result.emplace_back(ss.str());
     }
-    dealloc_jvmti->Deallocate(reinterpret_cast<unsigned char*>(class_fqn));
+    dealloc_jvmti->Deallocate(reinterpret_cast<unsigned char *>(class_fqn));
   }
   return result;
 }
