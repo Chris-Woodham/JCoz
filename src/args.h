@@ -4,6 +4,8 @@
 #include <string>
 #include <iostream>
 
+#include "spdlog/spdlog.h"
+
 enum profiler_option
 {
   _unknown,
@@ -12,7 +14,8 @@ enum profiler_option
   _progress_point,
   _end_to_end,
   _warmup,
-  _fix_exp
+  _fix_exp,
+  _logging_level,
 };
 
 namespace agent_args
@@ -25,8 +28,46 @@ namespace agent_args
     if (option == "end-to-end") return _end_to_end;
     if (option == "warmup") return _warmup;
     if (option == "fix-exp") return _fix_exp;
+    if (option == "logging-level") return _logging_level;
 
     return _unknown;
+  }
+
+  spdlog::level::level_enum parse_logging_level(std::string logging_level_input) {
+      switch (logging_level_input.front())
+      {
+      case 't':
+          if (logging_level_input == "trace")
+              return spdlog::level::trace;
+          break;
+      case 'd':
+          if (logging_level_input == "debug")
+              return spdlog::level::debug;
+          break;
+      case 'i':
+          if (logging_level_input == "info")
+              return spdlog::level::info;
+          break;
+      case 'w':
+          if (logging_level_input == "warn")
+              return spdlog::level::warn;
+          break;
+      case 'e':
+          if (logging_level_input == "error")
+              return spdlog::level::err;
+          break;
+      case 'c':
+          if (logging_level_input == "critical")
+              return spdlog::level::critical;
+          break;
+      case 'o':
+          if (logging_level_input == "off")
+              return spdlog::level::off;
+          break;
+      default:
+          report_error(fmt::format("Invalid logging level passed as input: {}", logging_level_input).c_str());
+      }
+      report_error(fmt::format("Invalid logging level passed as input: {}", logging_level_input).c_str());
   }
 
   void print_usage()

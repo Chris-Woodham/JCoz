@@ -180,6 +180,11 @@ void Profiler::ParseOptions(const char *options)
         break;
       }
 
+      case _logging_level: {
+        Profiler::logger->set_level(agent_args::parse_logging_level(value));
+        break;
+      }
+
       case _end_to_end:
         end_to_end = true;
         break;
