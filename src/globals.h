@@ -33,10 +33,25 @@
 
 // ----------------- SETTINGS ---------------------
 
+// --- Output Settings
+
 // File path to profiler log
 // If full path is not specified (e.g. "log.txt"), log file will be created in current directory
 // If full path is specified (e.g. "/home/ubuntu/log.txt"), file will be created in path specified
 #define PROFILER_LOG_FILE "profiler_log.txt"
+
+// --- Experiment Time Settings
+
+// Minimum experiment length in milliseconds
+#define MIN_EXP_TIME 5000
+// Maximum experiment length in milliseconds
+#define MAX_EXP_TIME 80000
+// Points hit below this value will increase experiment time (insufficient hits => inc time)
+#define HITS_TO_INC_EXP_TIME 5
+// Points hit above this value will decrease experiment time (too many hits => dec time)
+#define HITS_TO_DEC_EXP_TIME 20
+// Each time the experiment time is increased, it is multiplied by this factor. Divided for decrease
+#define EXP_TIME_FACTOR 2
 
 // ----------------- Useful Macros -----------------
 

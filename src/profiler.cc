@@ -54,7 +54,6 @@ __thread JNIEnv *Accessors::env_;
 #endif
 
 #define SIGNAL_FREQ 1000000L
-#define MIN_EXP_TIME 5000
 
 #define NUM_CALL_FRAMES 200
 
@@ -332,6 +331,29 @@ float Profiler::calculate_random_speedup()
   }
 }
 
+void Profiler::update_experiment_length()
+{
+  // Fixed experiment length => no need to update experiment length
+  if (fix_exp)
+    return;
+
+  if (current_experiment.points_hit <= HITS_TO_INC_EXP_TIME)
+  {
+    if (experiment_time * 2 > MAX_EXP_TIME)
+    {
+      experiment_time = MAX_EXP_TIME;
+    }
+    else
+    {
+      experiment_time *= EXP_TIME_FACTOR;
+    }
+  }
+  else if ((experiment_time > MIN_EXP_TIME) && (current_experiment.points_hit >= HITS_TO_DEC_EXP_TIME))
+  {
+    experiment_time /= EXP_TIME_FACTOR;
+  }
+}
+
 void Profiler::runExperiment(JNIEnv *jni_env)
 {
   logger->info("Running experiment");
@@ -381,17 +403,7 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   // printf("Total experiment delay: %ld, total duration: %ld\n", current_experiment.delay, current_experiment.duration);
 
   // Maybe update the experiment length
-  if (!fix_exp)
-  {
-    if (current_experiment.points_hit <= 5)
-    {
-      experiment_time *= 2;
-    }
-    else if ((experiment_time > MIN_EXP_TIME) && (current_experiment.points_hit >= 20))
-    {
-      experiment_time /= 2;
-    }
-  }
+  Profiler::update_experiment_length();
 
   bci_hits::add_hit(sig, current_experiment.method_id, current_experiment.lineno, current_experiment.bci);
 

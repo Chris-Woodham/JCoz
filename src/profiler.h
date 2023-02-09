@@ -172,6 +172,7 @@ private:
   static bool inline frameInScope(JVMPI_CallFrame &curr_frame);
   DISALLOW_COPY_AND_ASSIGN(Profiler);
 
+  static void update_experiment_length();
   static void prepare_scope(std::string &scope);
 
   static void add_search_scope(std::string &scope);
