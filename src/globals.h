@@ -79,47 +79,47 @@
 // cases where memcpy doesn't.
 template <class Dest, class Source>
 inline Dest bit_cast(const Source& source) {
-  // Compile time assertion: sizeof(Dest) == sizeof(Source)
-  // A compile error here means your Dest and Source have different sizes.
-  typedef char VerifySizesAreEqual[sizeof(Dest) == sizeof(Source) ? 1 : -1]
-    __attribute__ ((unused));
+    // Compile time assertion: sizeof(Dest) == sizeof(Source)
+    // A compile error here means your Dest and Source have different sizes.
+    typedef char VerifySizesAreEqual[sizeof(Dest) == sizeof(Source) ? 1 : -1]
+            __attribute__ ((unused));
 
-  Dest dest;
-  memcpy(&dest, &source, sizeof(dest));
-  return dest;
+    Dest dest;
+    memcpy(&dest, &source, sizeof(dest));
+    return dest;
 }
 
 template<class T>
 class JvmtiScopedPtr {
-  public:
+public:
     explicit JvmtiScopedPtr(jvmtiEnv *jvmti)
-      : jvmti_(jvmti),
-      ref_(NULL) {}
+            : jvmti_(jvmti),
+              ref_(NULL) {}
 
     JvmtiScopedPtr(jvmtiEnv *jvmti, T *ref)
-      : jvmti_(jvmti),
-      ref_(ref) {}
+            : jvmti_(jvmti),
+              ref_(ref) {}
 
     ~JvmtiScopedPtr() {
-      if (NULL != ref_) {
-        JVMTI_ERROR(jvmti_->Deallocate((unsigned char *)ref_));
-      }
+        if (NULL != ref_) {
+            JVMTI_ERROR(jvmti_->Deallocate((unsigned char *)ref_));
+        }
     }
 
     T **GetRef() {
-      assert(ref_ == NULL);
-      return &ref_;
+        assert(ref_ == NULL);
+        return &ref_;
     }
 
     T *Get() {
-      return ref_;
+        return ref_;
     }
 
     void AbandonBecauseOfError() {
-      ref_ = NULL;
+        ref_ = NULL;
     }
 
-  private:
+private:
     jvmtiEnv *jvmti_;
     T *ref_;
 
@@ -128,35 +128,35 @@ class JvmtiScopedPtr {
 
 // Accessors for a JNIEnv for this thread.
 class Accessors {
-  public:
+public:
 #ifdef __APPLE__
     // As of 8/2013, Darwin doesn't support __thread.  We love you,
     // Darwin!
     static void SetCurrentJniEnv(JNIEnv *env) {
-      static bool once = false;
-      int err;
-      if ((err = pthread_setspecific(key_, reinterpret_cast<void *>(env))) != 0 &&
-          !once) {
-        once = true;
-        perror("Was not able to set JNIEnv for at least one thread: ");
-      }
+        static bool once = false;
+        int err;
+        if ((err = pthread_setspecific(key_, reinterpret_cast<void *>(env))) != 0 &&
+            !once) {
+            once = true;
+            perror("Was not able to set JNIEnv for at least one thread: ");
+        }
     }
 
     static JNIEnv *CurrentJniEnv() {
-      JNIEnv *p = reinterpret_cast<JNIEnv *>(pthread_getspecific(key_));
-      return p;
+        JNIEnv *p = reinterpret_cast<JNIEnv *>(pthread_getspecific(key_));
+        return p;
     }
 
     static void Init() {
-      if (pthread_key_create(&key_, NULL) != 0) {
-        perror("Unable to init thread-local storage.  Profiling won't work:");
-      }
+        if (pthread_key_create(&key_, NULL) != 0) {
+            perror("Unable to init thread-local storage.  Profiling won't work:");
+        }
     }
 
     static void Destroy() {
-      if (pthread_key_delete(key_) != 0) {
-        // Meh.
-      }
+        if (pthread_key_delete(key_) != 0) {
+            // Meh.
+        }
     }
 #else
     static void SetCurrentJniEnv(JNIEnv *env) {
@@ -175,7 +175,7 @@ class Accessors {
 #endif
 
     template <class FunctionType>
-      static inline FunctionType GetJvmFunction(const char *function_name) {
+    static inline FunctionType GetJvmFunction(const char *function_name) {
         // get handle to library
 #ifdef __APPLE__
         static void *handle = dlopen("libjvm.dylib", RTLD_LAZY);
@@ -183,14 +183,14 @@ class Accessors {
         static void *handle = dlopen("libjvm.so", RTLD_LAZY);
 #endif
         if (handle == NULL) {
-          return NULL;
+            return NULL;
         }
 
         // get address of function, return null if not found
         return bit_cast<FunctionType>(dlsym(handle, function_name));
-      }
+    }
 
-  private:
+private:
 #ifdef __APPLE__
     static pthread_key_t key_;
 #else
@@ -218,24 +218,24 @@ class Accessors {
 #endif  // defined(__GNUC__) && (defined(i386) || defined(__x86_64))
 
 inline intptr_t NoBarrier_CompareAndSwap(volatile intptr_t *ptr,
-    intptr_t old_value,
-    intptr_t new_value) {
-  intptr_t prev;
-  __asm__ __volatile__(__CAS_INSTR
-      : "=a"(prev)
-      : "q"(new_value), "m"(*ptr), "0"(old_value)
-      : "cc", "memory");
-  return prev;
+                                         intptr_t old_value,
+                                         intptr_t new_value) {
+    intptr_t prev;
+    __asm__ __volatile__(__CAS_INSTR
+            : "=a"(prev)
+            : "q"(new_value), "m"(*ptr), "0"(old_value)
+            : "cc", "memory");
+    return prev;
 }
 
 inline intptr_t NoBarrier_AtomicIncrement(volatile intptr_t* ptr,
-    intptr_t increment) {
-  intptr_t temp = increment;
-  __asm__ __volatile__(__ADD_INSTR
-      : "+r" (temp), "+m" (*ptr)
-      : : "cc", "memory");
-  // temp now contains the previous value of *ptr
-  return temp + increment;
+                                          intptr_t increment) {
+    intptr_t temp = increment;
+    __asm__ __volatile__(__ADD_INSTR
+            : "+r" (temp), "+m" (*ptr)
+            : : "cc", "memory");
+    // temp now contains the previous value of *ptr
+    return temp + increment;
 }
 
 #undef __CAS_INSTR
@@ -253,10 +253,10 @@ static const int kMaxStackTraces = 3000;
 static const int kMaxFramesToCapture = 128;
 
 // Location where the data are dumped.
-static const char kDefaultOutFile[] = "traces.txt";
+static const char kDefaultOutFile[] = "jcoz_output.coz";
 
 class Globals {
-  public:
+public:
     static FILE *OutFile;
 };
 

@@ -33,7 +33,7 @@ PLATFORM_WARNINGS:=-Wframe-larger-than=16384 \
 
 LIBS=-ldl -lpthread
 
-SRC_DIR:=$(PWD)/src/native
+SRC_DIR:=$(PWD)/src
 BUILD_DIR?=$(shell mkdir build-$(BITS) 2> /dev/null; echo $(PWD)/build-$(BITS))
 
 OPT?=-O3
