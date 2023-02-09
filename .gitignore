@@ -21,6 +21,7 @@ cmake-build-debug/
 out
 questions
 src/java/target
+rsync*
 *.class
 *.coz
 *.iml
