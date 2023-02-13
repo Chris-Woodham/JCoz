@@ -71,6 +71,21 @@ For example, to run profiler on progress point `com.example.MyClass:42`, search 
 
 #### Options
 
+Note: `pkg` and `search` options are equivalent and one of the two _must_ be specified
+
+CHECK THIS
+
+| Option | Is required? | Default | What does it do? | Example |
+|---|:---:|:---:|---|---|
+| `pkg` | &#10003; if no `search` | &#8213; | Specifies which single package is within scope for Java to profile | java.util |
+| `search` | &#10003; if no `pkg` | &#8213; | Allows specifying multiple scopes to profile using `\|` as a delimiter | java.util.concurrent\|java.util.stream |
+| `ignore` | &#10007; | &#8213; | Scopes to ignore when profiling the application using `\|` as a delimiter | java.util.function\|java.util.random |
+| `progress-point` | &#10003; | &#8213; |  | Lcom/google/Main:12 |
+| `logging-level` | &#10007; | info | Sets the logging level of profiler's logger. Only those in next column are accepted | trace, debug, info, warn, error, critical, off |
+| `end-to-end` | &#10007; | false | NOT RECOMMENDED Sets progress point to be when the application finishes running |  |
+| `output-file` | &#10007; | jcoz-output.coz | Specifies path and name of output file. Ensure this is in a writable location | /home/ubuntu/profiler-output.coz |
+| `warmup` | &#10007; | 5000 | Amount of time for agent thread to sleep in milliseconds IMPLMENTATION COMMENTED OUT | 120000 |
+
 ## Getting a profiling visualisation
 
 Experiment results will be in file `output.coz`.
