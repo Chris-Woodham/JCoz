@@ -466,7 +466,7 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
   curr_ut = NULL;
   user_threads_lock = 0;
   std::atomic_thread_fence(std::memory_order_release);
-  //	usleep(warmup_time);
+  std::this_thread::sleep_for(std::chrono::microseconds(warmup_time));
   prof_ready = true;
 
   while (_running)
