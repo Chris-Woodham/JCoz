@@ -1,12 +1,12 @@
 [![Join the chat at https://gitter.im/JCoz-profiler/community](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/JCoz-profiler/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-# Overview
+# JCoz
 
 JCoz is the world's first causal profiler for Java (and eventually all JVM) programs. It was inspired by [coz](https://github.com/plasma-umass/coz), the original causal profiler.
 
-For documentation, including installing, building, and using JCoz, please see our [Wiki page](https://github.com/Decave/JCoz/wiki) page.
+## Get Started
 
-## Dependencies
+### Dependencies
 
 - [spdlog](https://github.com/gabime/spdlog) (`0.11.0` or higher)
   - `apt-get install libspdlog-dev` for debian/ubuntu
@@ -14,20 +14,46 @@ For documentation, including installing, building, and using JCoz, please see ou
 - make
 - jdk, of course
 
-# Getting Started Tutorial
+Constraints on platform???
 
-## Build and shakeout
+What has it been tested on so far
 
-You can drive a basic test use case through the Makefile.
+### Building the native agent
 
-Start by building everything from scratch:
+Once all the dependencies have been installed, the native is built using make
 
-```
+```sh
 make clean
 make all
 ```
 
-This will build a native agent, which can be found in `build-$BITS` directory.
+This will build a native agent, which can be found in `build-<bits_in_platfrom_architecture>` directory.
+
+### Profiling a Java application
+
+To launch your application with the JCoz profiler, Java's `-agentpath` argument is used (see [Java docs for further info](https://docs.oracle.com/en/java/javase/18/docs/specs/man/java.html#standard-options-for-java)). The command would take the form,
+
+```sh
+java -agentpath:pathname[=options] Main
+```
+
+Using the Java application in the [example folder](example/) and only specifying the required options, the command would be
+
+```sh
+user@ubuntu:~/Jcoz/example/src $ java -agentpath:/path/to/libagent.so=progress-point=Ldummy/Main:11_pkg=dummy dummy/Main
+```
+
+This would set a progress point in line 11 of the class `Main` in the package `dummy` (in [src/dummy/Main.java](example/src/dummy/Main.java)) and any code within `src/dummy` would be in the scope for profiling, i.e. both [dummy.Main](example/src/dummy/Main.java) and [dummy.nested.Help](example/src/dummy/nested/Help.java).
+
+For all the available options, see the [_options_ section below](#options).
+
+Note:
+
+1. Options to agent path are delimited using an underscore `_`
+   - If the value of any of the options contain an underscore, this will result in incorrect parsing
+2. Value is associated with an option to the agent using an equals `=`
+3. If program crashes immediately, make sure the version of jvm which will run your application is the same as the path to `path_to_java/lib` or `path_to_java/lib/server` in `LD_LIBRARY_PATH/DYLD_LIBRARY_PATH`. It might be that agent is unable to find `libjvm.so`/`libjvm.dylib` library
+4. See example folder for tomcat case
 
 The `-agentpath` argument has the following format:
 
@@ -43,7 +69,7 @@ For example, to run profiler on progress point `com.example.MyClass:42`, search 
 -agentpath:/path/to/liblagent=progress-point=Lcom/example/MyClass:42_search=java.util_ignore=java.util.concurrent|java.util.stream
 ```
 
-If program crashes immediately, make sure the version of jvm which will run your application is the same as the path to `path_to_java/lib` or `path_to_java/lib/server` in `LD_LIBRARY_PATH/DYLD_LIBRARY_PATH`. It might be that agent is unable to find `libjvm.so`/`libjvm.dylib` library.
+#### Options
 
 ## Getting a profiling visualisation
 
