@@ -3,24 +3,55 @@
 library(shiny)
 library(ggplot2)
 library(dplyr)
+library(plotly)
 rm(list = ls())
+
+
+## Graph
+graph_theme <- theme(strip.background = element_rect(fill = "white"),
+                  title = element_text(size = 18),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.background = element_rect(fill = "white"),
+                  legend.position = "bottom",
+                  legend.justification = "bottom",
+                  legend.text=element_text(size = 11),
+                  axis.line.x = element_line(color="black", size = 0.5),
+                  axis.line.y = element_line(color="black", size = 0.5),
+                  axis.title.y = element_text(size = 14),
+                  axis.text.y = element_text(size = 14),
+                  axis.title.x = element_text(size = 14),
+                  axis.text.x = element_text(size = 14),
+                  plot.margin = margin(t = 30, r = 10, b = 10, l = 10))
+
 
 
 
 #### ShinyApp front end (User Interface)
 
 ui <- fluidPage(
-  titlePanel("JCoz Causal Profile Viewer"),
+  titlePanel(title = "JCoz Causal Profile Viewer", windowTitle = "JCoz Causal Profile Viewer"), 
   sidebarLayout(
     sidebarPanel( 
-      sliderInput("graphSize", "Size of the graphs (1 = small, 10 = large)", value = 5, min = 1, max = 10),
       sliderInput("minSampleSize", "Minimum sample size to plot a graph", value = 20, min = 0, max = 100),
       fileInput("dataFile", NULL, accept = ".csv"),
       actionButton("plotGraphs", "Plot Graphs"),
-      actionButton("clearGraphs", "Clear Graphs")
+      actionButton("clearGraphs", "Clear Graphs"),
+      tags$div("\n"),
+      tags$h4("Graph info:"),
+      tags$div(
+        tags$ul(
+          tags$li("The fitted blue line represents the general trend of throughput with line speedup"),
+          tags$li("The grey area surrounding the trend line is a measure of the confidence in the trend (the wider the grey area, the lower the confidence we have in the trend)"),
+          tags$li("The result of each individual experiment is plotted as a grey data point (the more experiments with identical results, the darker the data point)")
+          )
+      ),
+      width = 3,
+      style = "position:fixed; width:25%;"
     ),
     mainPanel(
-      uiOutput("allPlots")
+      uiOutput("allPlots"),
+      width = 9
     )
   )
 )
@@ -39,51 +70,61 @@ server <- function(input, output, session) {
            csv = {jcozData = read.csv(input$dataFile$datapath, header = TRUE)},
            validate("Invalid file format; please upload a .csv file")
     )
+    jcozData$selectedClassLineNo <- as.factor(jcozData$selectedClassLineNo)
     
     # calculate throughput (Number of progress points hit per second)
     jcozData$throughput = (jcozData$progressPointHits / jcozData$duration) * 1000000000
     jcozData
   })
   
-  output$allPlots <- renderUI({
-    plot_list <- list()
-    
-    req(input$dataFile)
-    data <- getJcozData()
-    # calculate min and max throughput
-    min_throughput = min(data()$throughput) * 0.99
-    max_throughput = max(data()$throughput) * 1.01
-    
-    for (method in unique(data()$selectedClassLineNo)) {
-      print(method)
-    }
-    
-    current_method_index = 1
-    
-    unique_methods <- unique(data()$selectedClassLineNo)
-    
-    plot_list <- lapply(unique_methods, function(method){
-      method_data = dplyr::filter(data(), selectedClassLineNo == method)
-      if (nrow(method_data) >= input$minSampleSize && nrow(filter(method_data, speedup == 0)) >= 3) {
+  observeEvent(input$plotGraphs, {
+    output$allPlots <- renderUI({
+      plot_list <- list()
+      
+      req(input$dataFile)
+      data <- getJcozData()
+      # calculate min and max throughput
+      min_throughput = min(data()$throughput) * 0.99
+      max_throughput = max(data()$throughput) * 1.01
+      
+      for (method in unique(data()$selectedClassLineNo)) {
+        print(method)
+      }
+      
+      current_method_index = 1
+      filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
+      unique_methods <- unique(filtered_data$selectedClassLineNo)
+      plot_list <- lapply(unique_methods, function(method){
+        method_data = dplyr::filter(data(), selectedClassLineNo == method)
+        subtitle <- paste0(" Sample size: ", nrow(method_data))
         renderPlot({
           ggplot() +
             geom_point(data = method_data, aes(x = speedup, y = throughput), size = 2, alpha = 0.3) +
-            geom_point(data = method_data %>% dplyr::group_by(speedup) %>% dplyr::summarise(mean_throughput = mean(throughput)), 
-                       aes(x = speedup, y = mean_throughput), size = 5, colour = "navyblue") +
-            geom_smooth(data = method_data, aes(x = speedup, y = throughput), method = "loess", se = FALSE) +
+            #geom_point(data = method_data %>% dplyr::group_by(speedup) %>% dplyr::summarise(mean_throughput = mean(throughput)), 
+            #           aes(x = speedup, y = mean_throughput), size = 4, colour = "navyblue") +
+            geom_smooth(data = method_data, aes(x = speedup, y = throughput), colour = "blue",  method = "loess", se = TRUE) +
+            ylab("Throughput (no. progress points hit per second)") +
             ylim(min_throughput, max_throughput) +
-            theme_classic()
+            scale_x_continuous(name = "Line speedup (%)", breaks = c(0.00, 0.25, 0.50, 0.75, 1.00), labels = c(0, 25, 50, 75, 100), limits = c(0, 1)) +
+            ggtitle(method, subtitle = subtitle) +
+            graph_theme
         })
-          }
-    }
-    )
+      }
+      )
+      
+      convert_plots_to_UI <- fluidRow(
+        lapply(1:length(unique_methods), function(plot_list_index) column(6, plot_list[plot_list_index]))
+      )
+      
+      return(convert_plots_to_UI)
+    })
     
-    convert_plots_to_UI <- fluidRow(
-      lapply(1:length(unique_methods), function(plot_list_index) column(6, plot_list[plot_list_index]))
-    )
-
-    return(convert_plots_to_UI)
+    output$legend <- renderText("Legend")
   })
+    
+    observeEvent(input$clearGraphs, {
+      output$allPlots <- renderUI({})
+    })
 }
 
 
@@ -91,3 +132,4 @@ server <- function(input, output, session) {
 #### run ShinyApp
 
 shinyApp(ui, server)
+
