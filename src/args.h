@@ -23,7 +23,7 @@ namespace agent_args
 {
   profiler_option from_string(std::string &option)
   {
-    if (option == "pkg" || option == "package" || option == "search")
+    if (option == "pkg" || option == "search")
       return _search_scopes;
     if (option == "ignore")
       return _ignored_scopes;
