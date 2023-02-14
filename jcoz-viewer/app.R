@@ -3,15 +3,15 @@
 library(shiny)
 library(ggplot2)
 library(dplyr)
-library(plotly)
+library(shinycssloaders)
 rm(list = ls())
 
 
-## Graph
+## Graph theme
 graph_theme <- theme(strip.background = element_rect(fill = "white"),
                   title = element_text(size = 18),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
+                  panel.grid.major = element_line(colour = "lightgrey", size = 0.5),
+                  panel.grid.minor = element_line(colour = "lightgrey", size = 0.5),
                   panel.background = element_rect(fill = "white"),
                   legend.position = "bottom",
                   legend.justification = "bottom",
@@ -25,18 +25,33 @@ graph_theme <- theme(strip.background = element_rect(fill = "white"),
                   plot.margin = margin(t = 30, r = 10, b = 10, l = 10))
 
 
+#### Global variables
+graphs_rendered <- FALSE
+graph_progress <- shiny::Progress$new()
+
 
 
 #### ShinyApp front end (User Interface)
 
 ui <- fluidPage(
-  titlePanel(title = "JCoz Causal Profile Viewer", windowTitle = "JCoz Causal Profile Viewer"), 
+  titlePanel(title = "JCoz Causal Profile Viewer", windowTitle = "JCoz Causal Profile Viewer"),
+  tags$head(
+    style = ".shiny-notification {
+              height: 100px;
+              width: 800px;
+              position:fixed;
+              top: calc(50% - 50px);;
+              left: calc(50% - 400px);;
+            }
+           "
+  ),
   sidebarLayout(
     sidebarPanel( 
       sliderInput("minSampleSize", "Minimum sample size to plot a graph", value = 20, min = 0, max = 100),
       fileInput("dataFile", NULL, accept = ".csv"),
       actionButton("plotGraphs", "Plot Graphs"),
       actionButton("clearGraphs", "Clear Graphs"),
+      tags$br(),
       tags$div("\n"),
       tags$h4("Graph info:"),
       tags$div(
@@ -78,50 +93,53 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$plotGraphs, {
+    # Create a progress object
+    graph_progress <- shiny::Progress$new()
+    graph_progress$set(message = "Plotting JCoz graphs", detail = "For large datasets, this can be a little slow. When the graphs appear, this box can be closed.", value = 0)
     output$allPlots <- renderUI({
-      plot_list <- list()
-      
-      req(input$dataFile)
-      data <- getJcozData()
-      # calculate min and max throughput
-      min_throughput = min(data()$throughput) * 0.99
-      max_throughput = max(data()$throughput) * 1.01
-      
-      for (method in unique(data()$selectedClassLineNo)) {
-        print(method)
-      }
-      
-      current_method_index = 1
-      filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
-      unique_methods <- unique(filtered_data$selectedClassLineNo)
-      plot_list <- lapply(unique_methods, function(method){
-        method_data = dplyr::filter(data(), selectedClassLineNo == method)
-        subtitle <- paste0(" Sample size: ", nrow(method_data))
-        renderPlot({
-          ggplot() +
-            geom_point(data = method_data, aes(x = speedup, y = throughput), size = 2, alpha = 0.3) +
-            #geom_point(data = method_data %>% dplyr::group_by(speedup) %>% dplyr::summarise(mean_throughput = mean(throughput)), 
-            #           aes(x = speedup, y = mean_throughput), size = 4, colour = "navyblue") +
-            geom_smooth(data = method_data, aes(x = speedup, y = throughput), colour = "blue",  method = "loess", se = TRUE) +
-            ylab("Throughput (no. progress points hit per second)") +
-            ylim(min_throughput, max_throughput) +
-            scale_x_continuous(name = "Line speedup (%)", breaks = c(0.00, 0.25, 0.50, 0.75, 1.00), labels = c(0, 25, 50, 75, 100), limits = c(0, 1)) +
-            ggtitle(method, subtitle = subtitle) +
-            graph_theme
+        plot_list <- list()
+        req(input$dataFile)
+        data <- getJcozData()
+        # calculate min and max throughput
+        min_throughput = min(data()$throughput) * 0.99
+        max_throughput = max(data()$throughput) * 1.01
+        
+        filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
+        unique_methods <- unique(filtered_data$selectedClassLineNo)
+
+        num_unique_methods <- length(unique_methods)
+        
+        plot_list <- lapply(unique_methods, function(method){
+          method_data = dplyr::filter(data(), selectedClassLineNo == method)
+          subtitle <- paste0(" Sample size: ", nrow(method_data))
+          renderPlot({
+            ggplot() +
+              geom_point(data = method_data, aes(x = speedup, y = throughput), size = 2, alpha = 0.3) +
+              geom_smooth(data = method_data, aes(x = speedup, y = throughput), colour = "blue",  method = "loess", se = TRUE) +
+              ylab("Throughput (no. progress points hit per second)") +
+              ylim(min_throughput, max_throughput) +
+              scale_x_continuous(name = "Line speedup (%)", breaks = c(0.00, 0.25, 0.50, 0.75, 1.00), labels = c(0, 25, 50, 75, 100), limits = c(0, 1)) +
+              ggtitle(method, subtitle = subtitle) +
+              graph_theme
+          }) %>% bindCache(method_data$speedup, method_data$throughput)
+        }
+        )
+
+        convert_plots_to_UI <-
+            fluidRow(
+              lapply(1:num_unique_methods, function(plot_list_index) {
+                graph_progress$inc(1/(num_unique_methods + 1))
+                return(column(6, plot_list[plot_list_index]))
+              }
+                )
+            ) 
+
+        graph_progress$inc(1/(num_unique_methods + 1))
+        return(convert_plots_to_UI)
         })
-      }
-      )
-      
-      convert_plots_to_UI <- fluidRow(
-        lapply(1:length(unique_methods), function(plot_list_index) column(6, plot_list[plot_list_index]))
-      )
-      
-      return(convert_plots_to_UI)
+    
     })
-    
-    output$legend <- renderText("Legend")
-  })
-    
+  
     observeEvent(input$clearGraphs, {
       output$allPlots <- renderUI({})
     })
