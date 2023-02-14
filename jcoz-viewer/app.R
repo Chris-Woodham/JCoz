@@ -3,7 +3,6 @@
 library(shiny)
 library(ggplot2)
 library(dplyr)
-library(shinycssloaders)
 rm(list = ls())
 
 
@@ -25,26 +24,13 @@ graph_theme <- theme(strip.background = element_rect(fill = "white"),
                   plot.margin = margin(t = 30, r = 10, b = 10, l = 10))
 
 
-#### Global variables
-graphs_rendered <- FALSE
-graph_progress <- shiny::Progress$new()
 
-
+#### Global variables - 
 
 #### ShinyApp front end (User Interface)
 
 ui <- fluidPage(
   titlePanel(title = "JCoz Causal Profile Viewer", windowTitle = "JCoz Causal Profile Viewer"),
-  tags$head(
-    style = ".shiny-notification {
-              height: 100px;
-              width: 800px;
-              position:fixed;
-              top: calc(50% - 50px);;
-              left: calc(50% - 400px);;
-            }
-           "
-  ),
   sidebarLayout(
     sidebarPanel( 
       sliderInput("minSampleSize", "Minimum sample size to plot a graph", value = 20, min = 0, max = 100),
@@ -82,10 +68,10 @@ server <- function(input, output, session) {
     
     fileExtension <- tools::file_ext(input$dataFile$name)
     switch(fileExtension,
-           csv = {jcozData = read.csv(input$dataFile$datapath, header = TRUE)},
+           csv = {jcozData = read.csv(input$dataFile$datapath, header = TRUE, stringsAsFactors = TRUE)},
            validate("Invalid file format; please upload a .csv file")
     )
-    jcozData$selectedClassLineNo <- as.factor(jcozData$selectedClassLineNo)
+    #jcozData$selectedClassLineNo <- as.factor(jcozData$selectedClassLineNo)
     
     # calculate throughput (Number of progress points hit per second)
     jcozData$throughput = (jcozData$progressPointHits / jcozData$duration) * 1000000000
@@ -93,9 +79,10 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$plotGraphs, {
+    req(input$dataFile)
     # Create a progress object
     graph_progress <- shiny::Progress$new()
-    graph_progress$set(message = "Plotting JCoz graphs", detail = "For large datasets, this can be a little slow. When the graphs appear, this box can be closed.", value = 0)
+    graph_progress$set(message = "Preparing JCoz graphs", detail = "For large datasets, this can take a while. There is a delay for initial rendering but when the graphs appear, this box can be closed.", value = 0)
     output$allPlots <- renderUI({
         plot_list <- list()
         req(input$dataFile)
@@ -105,6 +92,8 @@ server <- function(input, output, session) {
         max_throughput = max(data()$throughput) * 1.01
         
         filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
+        print(typeof(filtered_data))
+      
         unique_methods <- unique(filtered_data$selectedClassLineNo)
 
         num_unique_methods <- length(unique_methods)
@@ -118,7 +107,7 @@ server <- function(input, output, session) {
               geom_smooth(data = method_data, aes(x = speedup, y = throughput), colour = "blue",  method = "loess", se = TRUE) +
               ylab("Throughput (no. progress points hit per second)") +
               ylim(min_throughput, max_throughput) +
-              scale_x_continuous(name = "Line speedup (%)", breaks = c(0.00, 0.25, 0.50, 0.75, 1.00), labels = c(0, 25, 50, 75, 100), limits = c(0, 1)) +
+              scale_x_continuous(name = "Line speedup (%)", breaks = c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), labels = c(0, 20, 40, 60, 80, 100), limits = c(0, 1)) +
               ggtitle(method, subtitle = subtitle) +
               graph_theme
           }) %>% bindCache(method_data$speedup, method_data$throughput)
@@ -149,5 +138,5 @@ server <- function(input, output, session) {
 
 #### run ShinyApp
 
-shinyApp(ui, server)
+runApp(appDir = shinyApp(ui = ui, server = server), launch.browser = TRUE)
 
