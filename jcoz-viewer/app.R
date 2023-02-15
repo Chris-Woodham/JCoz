@@ -3,6 +3,8 @@
 library(shiny)
 library(ggplot2)
 library(dplyr)
+library(qpdf)
+library(gridExtra)
 rm(list = ls())
 
 
@@ -37,6 +39,7 @@ ui <- fluidPage(
       fileInput("dataFile", NULL, accept = ".csv"),
       actionButton("plotGraphs", "Plot Graphs"),
       actionButton("clearGraphs", "Clear Graphs"),
+      downloadButton("downloadGraphs", "Download graphs"),
       tags$br(),
       tags$div("\n"),
       tags$h4("Graph info:"),
@@ -71,8 +74,7 @@ server <- function(input, output, session) {
            csv = {jcozData = read.csv(input$dataFile$datapath, header = TRUE, stringsAsFactors = TRUE)},
            validate("Invalid file format; please upload a .csv file")
     )
-    #jcozData$selectedClassLineNo <- as.factor(jcozData$selectedClassLineNo)
-    
+
     # calculate throughput (Number of progress points hit per second)
     jcozData$throughput = (jcozData$progressPointHits / jcozData$duration) * 1000000000
     jcozData
@@ -132,6 +134,54 @@ server <- function(input, output, session) {
     observeEvent(input$clearGraphs, {
       output$allPlots <- renderUI({})
     })
+    
+    output$downloadGraphs <- downloadHandler(
+      filename = "jcoz-graphs.pdf",
+      content = function(fileName) {
+      plot_list <- list()
+      req(input$dataFile)
+      notification <- showNotification(
+        "Rendering PDFs...", 
+        duration = NULL, 
+        closeButton = FALSE
+      )
+      on.exit(removeNotification(notification), add = TRUE)
+      data <- getJcozData()
+      # calculate min and max throughput
+      min_throughput = min(data()$throughput) * 0.99
+      max_throughput = max(data()$throughput) * 1.01
+      
+      filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
+      print(typeof(filtered_data))
+      
+      unique_methods <- unique(filtered_data$selectedClassLineNo)
+      
+      num_unique_methods <- length(unique_methods)
+      
+      plot_list <- lapply(unique_methods, function(method){
+        method_data = dplyr::filter(data(), selectedClassLineNo == method)
+        subtitle <- paste0(" Sample size: ", nrow(method_data))
+        return(
+          ggplot() +
+            geom_point(data = method_data, aes(x = speedup, y = throughput), size = 2, alpha = 0.3) +
+            geom_smooth(data = method_data, aes(x = speedup, y = throughput), colour = "blue",  method = "loess", se = TRUE) +
+            ylab("Throughput (no. progress points hit per second)") +
+            ylim(min_throughput, max_throughput) +
+            scale_x_continuous(name = "Line speedup (%)", breaks = c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), labels = c(0, 20, 40, 60, 80, 100), limits = c(0, 1)) +
+            ggtitle(method, subtitle = subtitle) +
+            graph_theme
+        )
+      }
+      )
+      
+      ggsave(filename = fileName,
+             plot = gridExtra::marrangeGrob(plot_list, nrow = 1, ncol = 1),
+             width = 20, height = 20, unit = "cm")
+      
+      return(fileName)
+      
+      }
+    )
 }
 
 
