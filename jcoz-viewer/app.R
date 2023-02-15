@@ -1,14 +1,16 @@
-#### Set up packages and clear environment
+#### Set up packages, clear environment and parse the command line args
 
 library(shiny)
 library(ggplot2)
 library(dplyr)
-library(qpdf)
 library(gridExtra)
 rm(list = ls())
 
+command_line_args = commandArgs(trailingOnly=TRUE)
 
-## Graph theme
+
+
+#### Graph theme
 graph_theme <- theme(strip.background = element_rect(fill = "white"),
                   title = element_text(size = 18),
                   panel.grid.major = element_line(colour = "lightgrey", size = 0.5),
@@ -23,11 +25,9 @@ graph_theme <- theme(strip.background = element_rect(fill = "white"),
                   axis.text.y = element_text(size = 14),
                   axis.title.x = element_text(size = 14),
                   axis.text.x = element_text(size = 14),
-                  plot.margin = margin(t = 30, r = 10, b = 10, l = 10))
+                  plot.margin = margin(t = 30, r = 5, b = 10, l = 15))
 
 
-
-#### Global variables - 
 
 #### ShinyApp front end (User Interface)
 
@@ -39,7 +39,7 @@ ui <- fluidPage(
       fileInput("dataFile", NULL, accept = ".csv"),
       actionButton("plotGraphs", "Plot Graphs"),
       actionButton("clearGraphs", "Clear Graphs"),
-      downloadButton("downloadGraphs", "Download graphs"),
+      downloadButton("downloadGraphs", "Download Graphs"),
       tags$br(),
       tags$div("\n"),
       tags$h4("Graph info:"),
@@ -50,8 +50,8 @@ ui <- fluidPage(
           tags$li("The result of each individual experiment is plotted as a grey data point (the more experiments with identical results, the darker the data point)")
           )
       ),
-      width = 3,
-      style = "position:fixed; width:25%;"
+      style = "position:fixed; width:25%;",
+      width = 3
     ),
     mainPanel(
       uiOutput("allPlots"),
@@ -62,44 +62,54 @@ ui <- fluidPage(
 
 
 
-#### ShinyApp back end (server)
+#### ShinyApp back end (Server)
 
 server <- function(input, output, session) {
   
-  getJcozData <- reactive(function() {
+  getJcozData <- reactive(function(data) {
+    
+    # ensure that getJcozData() can only be called once the user has input the `dataFile`
     req(input$dataFile)
     
+    # read the data from the user input `dataFile`
     fileExtension <- tools::file_ext(input$dataFile$name)
     switch(fileExtension,
            csv = {jcozData = read.csv(input$dataFile$datapath, header = TRUE, stringsAsFactors = TRUE)},
            validate("Invalid file format; please upload a .csv file")
     )
-
+    
     # calculate throughput (Number of progress points hit per second)
     jcozData$throughput = (jcozData$progressPointHits / jcozData$duration) * 1000000000
     jcozData
   })
   
   observeEvent(input$plotGraphs, {
+    
+    # ensure that the graphs can only be plotted once the user has input the `dataFile`
     req(input$dataFile)
+    
     # Create a progress object
+    # Note - the progress bar is not perfect, it hits 100% progress before the graphs are completed and does not automatically close
+    # This is because this renderUI call itself returns a `fluidRow` object that then calls the graph rendering function (so at the end of the renderUI method - the progress bar should not automatically close because the graphs will not yet be rendered)
+    # However, the progress bar has a subtitle that briefly explains this to the user
     graph_progress <- shiny::Progress$new()
     graph_progress$set(message = "Preparing JCoz graphs", detail = "For large datasets, this can take a while. There is a delay for initial rendering but when the graphs appear, this box can be closed.", value = 0)
+    
+    # render the JCoz graphs
     output$allPlots <- renderUI({
-        plot_list <- list()
-        req(input$dataFile)
+      
+        # load and filter data
         data <- getJcozData()
-        # calculate min and max throughput
+        # calculate min and max throughput (so that all the graphs have the same scale on the y-axis)
         min_throughput = min(data()$throughput) * 0.99
         max_throughput = max(data()$throughput) * 1.01
-        
+        # filter the data to identify methods that: a) have 3 or more data points for 0 speed-up; and b) have a sample size greater than the user specified minimum sample size
         filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
-        print(typeof(filtered_data))
-      
         unique_methods <- unique(filtered_data$selectedClassLineNo)
-
         num_unique_methods <- length(unique_methods)
         
+        # create a list of ggplot objects - one for each of the unique_methods in the filtered data set
+        plot_list <- list()
         plot_list <- lapply(unique_methods, function(method){
           method_data = dplyr::filter(data(), selectedClassLineNo == method)
           subtitle <- paste0(" Sample size: ", nrow(method_data))
@@ -112,20 +122,25 @@ server <- function(input, output, session) {
               scale_x_continuous(name = "Line speedup (%)", breaks = c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), labels = c(0, 20, 40, 60, 80, 100), limits = c(0, 1)) +
               ggtitle(method, subtitle = subtitle) +
               graph_theme
-          }) %>% bindCache(method_data$speedup, method_data$throughput)
+          }) %>% bindCache(method_data$speedup, method_data$throughput) 
+          # this cache greatly speeds up re-rendering graphs when the user changes the minimum sample size
         }
         )
-
+        
+        # create a `fluidRow` output block that plots each of the ggplot graphs in `plot_list` in a `fluidRow` format
         convert_plots_to_UI <-
             fluidRow(
               lapply(1:num_unique_methods, function(plot_list_index) {
+                # increment the progress bar for graph rendering
                 graph_progress$inc(1/(num_unique_methods + 1))
                 return(column(6, plot_list[plot_list_index]))
-              }
-                )
+                }
+              )
             ) 
-
+        
+        # increment the progress bar for graph rendering
         graph_progress$inc(1/(num_unique_methods + 1))
+        
         return(convert_plots_to_UI)
         })
     
@@ -138,55 +153,61 @@ server <- function(input, output, session) {
     output$downloadGraphs <- downloadHandler(
       filename = "jcoz-graphs.pdf",
       content = function(fileName) {
-      plot_list <- list()
-      req(input$dataFile)
-      notification <- showNotification(
-        "Rendering PDFs...", 
-        duration = NULL, 
-        closeButton = FALSE
-      )
-      on.exit(removeNotification(notification), add = TRUE)
-      data <- getJcozData()
-      # calculate min and max throughput
-      min_throughput = min(data()$throughput) * 0.99
-      max_throughput = max(data()$throughput) * 1.01
-      
-      filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
-      print(typeof(filtered_data))
-      
-      unique_methods <- unique(filtered_data$selectedClassLineNo)
-      
-      num_unique_methods <- length(unique_methods)
-      
-      plot_list <- lapply(unique_methods, function(method){
-        method_data = dplyr::filter(data(), selectedClassLineNo == method)
-        subtitle <- paste0(" Sample size: ", nrow(method_data))
-        return(
-          ggplot() +
-            geom_point(data = method_data, aes(x = speedup, y = throughput), size = 2, alpha = 0.3) +
-            geom_smooth(data = method_data, aes(x = speedup, y = throughput), colour = "blue",  method = "loess", se = TRUE) +
-            ylab("Throughput (no. progress points hit per second)") +
-            ylim(min_throughput, max_throughput) +
-            scale_x_continuous(name = "Line speedup (%)", breaks = c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), labels = c(0, 20, 40, 60, 80, 100), limits = c(0, 1)) +
-            ggtitle(method, subtitle = subtitle) +
-            graph_theme
+        
+        # ensure that the graphs can only be plotted once the user has input the `dataFile`
+        req(input$dataFile)
+
+        # create the download notification pop-up box - and ensure that it closes automatically once the download completes
+        notification <- showNotification(
+          "Rendering PDF ...", 
+          duration = NULL, 
+          closeButton = FALSE
         )
-      }
-      )
-      
-      ggsave(filename = fileName,
-             plot = gridExtra::marrangeGrob(plot_list, nrow = 1, ncol = 1),
-             width = 20, height = 20, unit = "cm")
-      
-      return(fileName)
-      
-      }
+        on.exit(removeNotification(notification), add = TRUE)
+        
+        # load and filter data
+        data <- getJcozData()
+        # calculate min and max throughput (so that all the graphs have the same scale on the y-axis)
+        min_throughput = min(data()$throughput) * 0.99
+        max_throughput = max(data()$throughput) * 1.01
+        # filter the data to identify methods that: a) have 3 or more data points for 0 speed-up; and b) have a sample size greater than the user specified minimum sample size
+        filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
+        unique_methods <- unique(filtered_data$selectedClassLineNo)
+        num_unique_methods <- length(unique_methods)
+        
+        # create a list of ggplot objects - one for each of the unique_methods in the filtered data set
+        plot_list <- list()
+        plot_list <- lapply(unique_methods, function(method){
+          method_data = dplyr::filter(data(), selectedClassLineNo == method)
+          subtitle <- paste0(" Sample size: ", nrow(method_data))
+          return(
+            ggplot() +
+              geom_point(data = method_data, aes(x = speedup, y = throughput), size = 2, alpha = 0.3) +
+              geom_smooth(data = method_data, aes(x = speedup, y = throughput), colour = "blue",  method = "loess", se = TRUE) +
+              ylab("Throughput (no. progress points hit per second)") +
+              ylim(min_throughput, max_throughput) +
+              scale_x_continuous(name = "Line speedup (%)", breaks = c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), labels = c(0, 20, 40, 60, 80, 100), limits = c(0, 1)) +
+              ggtitle(method, subtitle = subtitle) +
+              graph_theme
+          )
+        }
+        )
+        
+        # save each of the ggplot graphs within `plot_list` into a single PDF whose name is determined by `fileName``
+        ggsave(filename = fileName,
+               plot = gridExtra::marrangeGrob(plot_list, nrow = 1, ncol = 1),
+               width = 20, height = 20, unit = "cm")
+        
+        # return the graph pdf so that it downloads on the browser
+        return(fileName)
+        }
     )
 }
 
 
 
-#### run ShinyApp
+#### Run ShinyApp
 
-runApp(appDir = shinyApp(ui = ui, server = server), launch.browser = TRUE)
+# Note - command_line_args[1] is the port that this shiny app will run on
+runApp(appDir = shinyApp(ui = ui, server = server), launch.browser = TRUE, port = as.numeric(command_line_args[1]))
 
