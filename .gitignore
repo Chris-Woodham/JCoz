@@ -23,6 +23,9 @@ rsync*
 *.txt
 *DS_Store*
 
+# an empty PDF produced when the JCoz viewer app generates the graph PDF for download
+*Rplots.pdf
+
 ##### Copied from C++ gitignore
 ##### https://github.com/github/gitignore/blob/4488915eec0b3a45b5c63ead28f286819c0917de/C++.gitignore
 # Prerequisites

@@ -37,18 +37,25 @@ ui <- fluidPage(
     sidebarPanel( 
       sliderInput("minSampleSize", "Minimum sample size to plot a graph", value = 20, min = 0, max = 100),
       fileInput("dataFile", NULL, accept = ".csv"),
-      actionButton("plotGraphs", "Plot Graphs"),
-      actionButton("clearGraphs", "Clear Graphs"),
-      downloadButton("downloadGraphs", "Download Graphs"),
-      tags$br(),
+      tags$div(
+        actionButton("plotGraphs", "Plot Graphs"),
+        actionButton("clearGraphs", "Clear Graphs")
+      ),
       tags$div("\n"),
       tags$h4("Graph info:"),
       tags$div(
         tags$ul(
           tags$li("The fitted blue line represents the general trend of throughput with line speedup"),
-          tags$li("The grey area surrounding the trend line is a measure of the confidence in the trend (the wider the grey area, the lower the confidence we have in the trend)"),
-          tags$li("The result of each individual experiment is plotted as a grey data point (the more experiments with identical results, the darker the data point)")
+          tags$li("The wider the grey area surrounding the trend line, the lower the confidence we have in the trend)"),
+          tags$li("The result of each individual experiment is plotted as a grey data point (overlapping data points appear darker)")
           )
+      ),
+      tags$h4("Downloading graphs"),
+      tags$div(
+        radioButtons("graphShape", label = "Select the shape for downloaded graphs:", 
+                     choices = c("Landscape", "Portrait", "Square"), 
+                     selected = "Square", inline = TRUE),
+        downloadButton("downloadGraphs", "Download Graphs")
       ),
       style = "position:fixed; width:25%;",
       width = 3
@@ -66,7 +73,7 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-  getJcozData <- reactive(function(data) {
+  getJcozData <- reactive(function() {
     
     # ensure that getJcozData() can only be called once the user has input the `dataFile`
     req(input$dataFile)
@@ -193,10 +200,22 @@ server <- function(input, output, session) {
         }
         )
         
+        # graph shape determined by user input
+        if (input$graphShape == "Landscape") {
+          graph_height_mm = 190
+          graph_width_mm = 277
+        } else if (input$graphShape == "Portrait") {
+          graph_height_mm = 277
+          graph_width_mm = 190
+        } else {
+          graph_height_mm = 190
+          graph_width_mm = 190
+        }
+        
         # save each of the ggplot graphs within `plot_list` into a single PDF whose name is determined by `fileName``
         ggsave(filename = fileName,
                plot = gridExtra::marrangeGrob(plot_list, nrow = 1, ncol = 1),
-               width = 20, height = 20, unit = "cm")
+               width = graph_width_mm, height = graph_height_mm, unit = "mm")
         
         # return the graph pdf so that it downloads on the browser
         return(fileName)
@@ -209,5 +228,5 @@ server <- function(input, output, session) {
 #### Run ShinyApp
 
 # Note - command_line_args[1] is the port that this shiny app will run on
-runApp(appDir = shinyApp(ui = ui, server = server), launch.browser = TRUE, port = as.numeric(command_line_args[1]))
+runApp(appDir = shinyApp(ui = ui, server = server), port = as.numeric(command_line_args[1]))
 
