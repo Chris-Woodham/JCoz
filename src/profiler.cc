@@ -186,7 +186,7 @@ void Profiler::ParseOptions(const char *options)
     }
 
     case _output_file:
-      kOutputFile = value;
+      agent_args::set_output_file(value);
       isOutputFileSet = true;
       break;
 
