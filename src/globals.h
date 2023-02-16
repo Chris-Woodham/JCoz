@@ -47,6 +47,7 @@ static std::string kOutputFile;
 // --- Experiment Time Settings
 
 // Minimum experiment length in milliseconds
+// If fix_exp argument is passed to program, experiments will be this length
 #define MIN_EXP_TIME 5000
 // Maximum experiment length in milliseconds
 #define MAX_EXP_TIME 80000
