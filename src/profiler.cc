@@ -186,7 +186,7 @@ void Profiler::ParseOptions(const char *options)
     }
 
     case _output_file:
-      kOutputFile = value;
+      agent_args::set_output_file(value);
       isOutputFileSet = true;
       break;
 
@@ -214,6 +214,14 @@ void Profiler::ParseOptions(const char *options)
   {
     kOutputFile = "jcoz-output.coz";
   }
+
+  // Set up column names for .csv data output file
+  std::stringstream column_names;
+  column_names << "selectedClassLineNo" << "," << "speedup" << "," << "duration" << "," << "progressPointHits" << "\n";
+  std::ofstream output_file;
+  output_file.open(kOutputFile.data(), std::ios_base::app);
+  output_file << column_names.rdbuf();
+  output_file.close();
 
   const char *const delim = ", ";
 
@@ -422,8 +430,7 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   logger->flush();
   // Append the experiment results to the output file
   std::stringstream experiment_data;
-  experiment_data << "experiment\tselected=" << sig << ":" << current_experiment.lineno << "\tspeedup=" << current_experiment.speedup << "\tduration=" << current_experiment.duration << "\n"
-                  << "progress-point\tname=end-to-end\ttype=source\tdelta=" << current_experiment.points_hit << "\n";
+  experiment_data << sig << ":" << current_experiment.lineno << "," << current_experiment.speedup << "," << current_experiment.duration << "," << current_experiment.points_hit << "\n";
   std::ofstream output_file;
   output_file.open(kOutputFile.data(), std::ios_base::app);
   output_file << experiment_data.rdbuf();
