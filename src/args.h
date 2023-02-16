@@ -3,6 +3,8 @@
 
 #include <string>
 #include <iostream>
+#include <iomanip>
+#include <ctime>
 
 #include "spdlog/spdlog.h"
 
@@ -100,6 +102,20 @@ namespace agent_args
 
     return spdlog::level::off; // UNREACHABLE
   }
+
+  void set_output_file(std::string output_string_from_command_line) {
+    auto c_time = std::time(nullptr);
+    auto current_time = *std::localtime(&c_time);
+    std::stringstream output_stringstream;
+    auto position = output_string_from_command_line.find('.');
+    if (position != std::string::npos) {
+      output_stringstream << output_string_from_command_line.substr(0, position) << std::put_time(&current_time, "-%d-%m-%Y-%H-%M-%S") << ".csv";
+    } else {
+      output_stringstream << output_string_from_command_line << std::put_time(&current_time, "-%d-%m-%Y-%H-%M-%S") << ".csv";
+    }
+    kOutputFile = output_stringstream.str();
+  }
+
 } // namespace agent_args
 
 #endif // JCOZ_ARGS_H
