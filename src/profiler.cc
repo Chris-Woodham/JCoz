@@ -217,7 +217,7 @@ void Profiler::ParseOptions(const char *options)
 
   // Set up column names for .csv data output file
   std::stringstream column_names;
-  column_names << "selectedClassLineNo" << "," << "speedup" << "," << "duration" << "," << "progressPointHits" << "\n";
+  column_names << "selectedClassLineNo" << "," << "speedup" << "," << "effectiveDuration" << "," << "progressPointHits" << "\n";
   std::ofstream output_file;
   output_file.open(kOutputFile.data(), std::ios_base::app);
   output_file << column_names.rdbuf();
@@ -430,7 +430,7 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   logger->flush();
   // Append the experiment results to the output file
   std::stringstream experiment_data;
-  experiment_data << sig << ":" << current_experiment.lineno << "," << current_experiment.speedup << "," << current_experiment.duration << "," << current_experiment.points_hit << "\n";
+  experiment_data << sig << ":" << current_experiment.lineno << "," << current_experiment.speedup << "," << current_experiment.duration - current_experiment.delay << "," << current_experiment.points_hit << "\n";
   std::ofstream output_file;
   output_file.open(kOutputFile.data(), std::ios_base::app);
   output_file << experiment_data.rdbuf();

@@ -86,7 +86,7 @@ server <- function(input, output, session) {
     )
     
     # calculate throughput (Number of progress points hit per second)
-    jcozData$throughput = (jcozData$progressPointHits / jcozData$duration) * 1000000000
+    jcozData$throughput = (jcozData$progressPointHits / jcozData$effectiveDuration) * 1000000000
     jcozData
   })
   
