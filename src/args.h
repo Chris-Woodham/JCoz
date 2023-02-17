@@ -50,9 +50,17 @@ namespace agent_args
     std::cout
         << "usage: java -agentpath:<absolute_path_to_agent>="
         << "pkg=<package_name>_"
+        << "search=<package_name>|<another_package_name> (optional if pkg is specified)"
         << "progress-point=<class:line_no>_"
+        << "ignore=<package_name>|<another_package_name> (optional)"
         << "end-to-end (optional)_"
-        << "warmup=<warmup_time_ms> (optional - default 5000 ms)"
+        << "fix-exp (optional)_"
+        << "warmup=<warmup_time_ms> (optional - default 0 ms)"
+        << "logging-level=<desired_logging_level> (optional - default info)"
+        << "output-file=<output_filename> (optional - default jcoz-output.csv)"
+        << "\n"
+        << "progress-point class MUST follow JVM spec class signature conventions"
+        << "e.g. java.lang.String has the signature Ljava/lang/String"
         << std::endl;
   }
 
@@ -103,14 +111,18 @@ namespace agent_args
     return spdlog::level::off; // UNREACHABLE
   }
 
-  void set_output_file(std::string output_string_from_command_line) {
+  void set_output_file(std::string output_string_from_command_line)
+  {
     auto c_time = std::time(nullptr);
     auto current_time = *std::localtime(&c_time);
     std::stringstream output_stringstream;
     auto position = output_string_from_command_line.find('.');
-    if (position != std::string::npos) {
+    if (position != std::string::npos)
+    {
       output_stringstream << output_string_from_command_line.substr(0, position) << std::put_time(&current_time, "-%d-%m-%Y-%H-%M-%S") << ".csv";
-    } else {
+    }
+    else
+    {
       output_stringstream << output_string_from_command_line << std::put_time(&current_time, "-%d-%m-%Y-%H-%M-%S") << ".csv";
     }
     kOutputFile = output_stringstream.str();
