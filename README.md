@@ -12,11 +12,15 @@ JCoz is the world's first causal profiler for Java (and eventually all JVM) prog
   - `apt-get install libspdlog-dev` for debian/ubuntu
   - `yum install spdlog-devel` for fedora/rhel/centos
 - make
-- jdk, of course
+- g++
 
-Constraints on platform???
+On an ubuntu machine,
 
-What has it been tested on so far
+```sh
+sudo apt install -y make g++ libspdlog-dev
+```
+
+Note: Ubuntu 22 is currently not supported as a symbol lookup error (de-mangled symbol: `fmt::v8::detail::dragonbox::decimal_fp<float>`) is thrown. JCoz has been tested on Ubuntu 20 and 18
 
 ### Building the native agent
 
@@ -37,7 +41,7 @@ To launch your application with the JCoz profiler, Java's `-agentpath` argument 
 java -agentpath:pathname[=options] Main
 ```
 
-Using the Java application in the [example folder](example/) and only specifying the required options, the command would be
+Using the Java application in the [example folder](example/) and only specifying the required options, the command would be,
 
 ```sh
 user@ubuntu:~/Jcoz/example/src $ java -agentpath:/path/to/libagent.so=progress-point=Ldummy/Main:11_pkg=dummy dummy/Main
@@ -53,38 +57,29 @@ Note:
    - If the value of any of the options contain an underscore, this will result in incorrect parsing
 2. Value is associated with an option to the agent using an equals `=`
 3. If program crashes immediately, make sure the version of jvm which will run your application is the same as the path to `path_to_java/lib` or `path_to_java/lib/server` in `LD_LIBRARY_PATH/DYLD_LIBRARY_PATH`. It might be that agent is unable to find `libjvm.so`/`libjvm.dylib` library
-4. See example folder for tomcat case
-
-The `-agentpath` argument has the following format:
-
-```
--agentpath:/path/to/liblagent=progress-point=<progress point class fqn>:<line number>
-    _search=<search scope name 1>|<search scope name 2>|...|<scope to ignore N>
-    _ignore=<scope to ignore 1>|<scope to ignore 2>|...|<scope to ignore M> 
-```
-
-For example, to run profiler on progress point `com.example.MyClass:42`, search scope `java.util` and scopes `java.util.concurrent` and `java.util.stream`, the argument will be
-
-```
--agentpath:/path/to/liblagent=progress-point=Lcom/example/MyClass:42_search=java.util_ignore=java.util.concurrent|java.util.stream
-```
+4. For use in conjunction servlet such as tomcat, see [readme in example folder](example/readme.md) for details
 
 #### Options
 
-Note: `pkg` and `search` options are equivalent and one of the two _must_ be specified
+For more details and examples of how the options can be used, see the [readme in examples folder](example/readme.md).
 
-CHECK THIS
+Note:
+
+- `pkg` and `search` options are equivalent and one of the two _must_ be specified
+- `search` and `ignore` are delimited by `|` but this is a special character in most shells and needs to be escaped (e.g. in bash `\|`)
+- Class specified in `progress-point` _must_ follow the JVM specification class signature conventions, e.g. `java.lang.String` is `Ljava/lang/String`. If experiment has no points hit, this will be due to the progress point not being set.
 
 | Option | Is required? | Default | What does it do? | Example |
 |---|:---:|:---:|---|---|
-| `pkg` | &#10003; if no `search` | &#8213; | Specifies which single package is within scope for Java to profile | java.util |
-| `search` | &#10003; if no `pkg` | &#8213; | Allows specifying multiple scopes to profile using `\|` as a delimiter | java.util.concurrent\|java.util.stream |
-| `ignore` | &#10007; | &#8213; | Scopes to ignore when profiling the application using `\|` as a delimiter | java.util.function\|java.util.random |
-| `progress-point` | &#10003; | &#8213; |  | Lcom/google/Main:12 |
-| `logging-level` | &#10007; | info | Sets the logging level of profiler's logger. Only those in next column are accepted | trace, debug, info, warn, error, critical, off |
-| `end-to-end` | &#10007; | false | NOT RECOMMENDED Sets progress point to be when the application finishes running |  |
-| `output-file` | &#10007; | jcoz-output.coz | Specifies path and name of output file. Ensure this is in a writable location | /home/ubuntu/profiler-output.coz |
-| `warmup` | &#10007; | 5000 | Amount of time for agent thread to sleep in milliseconds IMPLMENTATION COMMENTED OUT | 120000 |
+| `pkg` | ✓  if no `search` | ― | Specifies which single package is within scope for Java to profile | java.util |
+| `search` | ✓  if no `pkg` | ― | Allows specifying multiple scopes to profile using `|` as a delimiter | java.util.concurrent\|java.util.stream |
+| `ignore` | ✗ | ― | Scopes to ignore when profiling the application using `|` as a delimiter | java.util.function\|java.util.random |
+| `progress-point` | ✓ | ― |  | Lcom/google/Main:12 |
+| `logging-level` | ✗ | info | Sets the logging level of profiler's logger. Only those in next column are accepted | trace, debug, info, warn, error, critical, off |
+| `output-file` | ✗ | jcoz-output.coz | Specifies path and name of output file. Ensure this is in a writable location. The actual name of the output file will have the time stamp of when the program was started appended to it | /home/ubuntu/profiler-output.coz |
+| `warmup` | ✗  | 0 | Amount of time for agent thread to sleep in milliseconds | 5000 |
+| `end-to-end` | ✗ | false | NOT RECOMMENDED Sets progress point to be when the application finishes running |  |
+| `fix_exp` | ✗  | false | Fixes the experiment length to be `MIN_EXP_TIME` in [globals.h](src/globals.h) | |
 
 ## Getting a profiling visualisation
 
@@ -100,3 +95,5 @@ and capture some samples!
 Be aware for that a real sized application there will be lots of code and lots
 of experiments that JCoz needs to run. You should plan to keep JCoz running for
 some hours to be confident in the results.
+
+pkg install python3 vim git autoconf gmake zip unzip wget cmake pkgconf libtool automake gsed pixman glib samba413 bash cups unzip libXext libXtst libXrandr jpeg-turbo lcms lcms2 giflib alsa-lib ninja libXt fontconfig gsed
