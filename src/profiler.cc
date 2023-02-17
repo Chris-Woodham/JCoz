@@ -57,7 +57,7 @@ __thread JNIEnv *Accessors::env_;
 // Maximum possible bytecode index (JVMS14, 4.7.3)
 #define MAX_BCI 65535
 
-typedef std::chrono::duration<int, std::milli> milliseconds_type;
+typedef std::chrono::duration<long, std::milli> milliseconds_type;
 typedef std::chrono::duration<long, std::nano> nanoseconds_type;
 
 ASGCTType Asgct::asgct_;
@@ -217,7 +217,7 @@ void Profiler::ParseOptions(const char *options)
 
   // Set up column names for .csv data output file
   std::stringstream column_names;
-  column_names << "selectedClassLineNo" << "," << "speedup" << "," << "effectiveDuration" << "," << "progressPointHits" << "\n";
+  column_names << "selectedClassLineNo" << "," << "speedup" << "," << "duration" << "," << "effectiveDuration" << "," << "progressPointHits" << "\n";
   std::ofstream output_file;
   output_file.open(kOutputFile.data(), std::ios_base::app);
   output_file << column_names.rdbuf();
@@ -330,7 +330,7 @@ float Profiler::calculate_random_speedup()
 
   int randVal = rand() % 40;
 
-  if (randVal < 10)
+  if (randVal < 8)
   {
     return 0;
   }
@@ -381,11 +381,13 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   milliseconds_type duration(experiment_time);
   auto start = std::chrono::high_resolution_clock::now();
   auto end = start + duration;
+
   while (_running && ((end_to_end && (points_hit == 0)) || (std::chrono::high_resolution_clock::now() < end)))
   {
     jcoz_sleep(SIGNAL_FREQ);
 
     signal_user_threads();
+
   }
 
   jcoz_sleep(SIGNAL_FREQ);
@@ -402,6 +404,7 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   }
 
   auto expEnd = std::chrono::high_resolution_clock::now();
+
   current_experiment.delay = global_delay;
   current_experiment.points_hit = points_hit;
   points_hit = 0;
@@ -430,7 +433,8 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   logger->flush();
   // Append the experiment results to the output file
   std::stringstream experiment_data;
-  experiment_data << sig << ":" << current_experiment.lineno << "," << current_experiment.speedup << "," << current_experiment.duration - current_experiment.delay << "," << current_experiment.points_hit << "\n";
+  long effectiveDuration = current_experiment.duration - current_experiment.delay;
+  experiment_data << sig << ":" << current_experiment.lineno << "," << current_experiment.speedup << "," << current_experiment.duration << "," << effectiveDuration << "," << current_experiment.points_hit << "\n";
   std::ofstream output_file;
   output_file.open(kOutputFile.data(), std::ios_base::app);
   output_file << experiment_data.rdbuf();
@@ -854,7 +858,6 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
 
   if (!in_experiment)
   {
-
     // lock in scope
     curr_ut->local_delay = 0;
     bool has_lock = in_scope_lock == pthread_self();
@@ -892,7 +895,6 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   }
   else
   {
-
     curr_ut->num_signals_received++;
     for (int i = 0; i < trace.num_frames; i++)
     {
