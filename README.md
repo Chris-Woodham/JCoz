@@ -96,4 +96,3 @@ Be aware for that a real sized application there will be lots of code and lots
 of experiments that JCoz needs to run. You should plan to keep JCoz running for
 some hours to be confident in the results.
 
-pkg install python3 vim git autoconf gmake zip unzip wget cmake pkgconf libtool automake gsed pixman glib samba413 bash cups unzip libXext libXtst libXrandr jpeg-turbo lcms lcms2 giflib alsa-lib ninja libXt fontconfig gsed
