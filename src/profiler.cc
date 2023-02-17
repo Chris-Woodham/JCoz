@@ -84,7 +84,7 @@ unsigned long Profiler::experiment_time = MIN_EXP_TIME;
 JNIEnv *Profiler::jni_;
 
 // How long should we wait before starting an experiment
-unsigned long Profiler::warmup_time = 5000000;
+unsigned long Profiler::warmup_time = 0;
 bool Profiler::prof_ready = false;
 
 // Progress point stuff
@@ -212,12 +212,19 @@ void Profiler::ParseOptions(const char *options)
 
   if (!isOutputFileSet)
   {
-    kOutputFile = "jcoz-output.coz";
+    kOutputFile = "jcoz-output.csv";
   }
 
   // Set up column names for .csv data output file
   std::stringstream column_names;
-  column_names << "selectedClassLineNo" << "," << "speedup" << "," << "duration" << "," << "progressPointHits" << "\n";
+  column_names << "selectedClassLineNo"
+               << ","
+               << "speedup"
+               << ","
+               << "duration"
+               << ","
+               << "progressPointHits"
+               << "\n";
   std::ofstream output_file;
   output_file.open(kOutputFile.data(), std::ios_base::app);
   output_file << column_names.rdbuf();
@@ -473,7 +480,10 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
   curr_ut = NULL;
   user_threads_lock = 0;
   std::atomic_thread_fence(std::memory_order_release);
-  std::this_thread::sleep_for(std::chrono::microseconds(warmup_time));
+  if (warmup_time != 0)
+  {
+    std::this_thread::sleep_for(std::chrono::microseconds(warmup_time));
+  }
   prof_ready = true;
 
   while (_running)
