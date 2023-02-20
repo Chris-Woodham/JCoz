@@ -310,12 +310,40 @@ void Profiler::setProgressPoint(std::string class_name, jint line_no)
 
 void Profiler::signal_user_threads()
 {
+  logger->info("Signalling user threads .........");
   while (!__sync_bool_compare_and_swap(&user_threads_lock, 0, 1))
     ;
   std::atomic_thread_fence(std::memory_order_acquire);
+  int thread_number = 0;
   for (auto i = user_threads.begin(); i != user_threads.end(); i++)
   {
-    pthread_kill((*i)->thread, SIGPROF);
+    std::atomic_thread_fence(std::memory_order_acquire);
+    logger->info("Signalling to thread: {thread_number}", fmt::arg("thread_number", thread_number));
+    int error_code = pthread_kill((*i)->thread, SIGPROF);
+    logger->info("Return value from pthread_kill was: {return_value}", fmt::arg("return_value", error_code));
+    thread_number += 1;
+    std::atomic_thread_fence(std::memory_order_release);
+  }
+  user_threads_lock = 0;
+  std::atomic_thread_fence(std::memory_order_release);
+}
+
+void Profiler::signal_user_threads_end_of_experiment()
+{
+  logger->info("Signalling user threads .........");
+  while (!__sync_bool_compare_and_swap(&user_threads_lock, 0, 1))
+    ;
+  std::atomic_thread_fence(std::memory_order_acquire);
+  int thread_number = 0;
+  for (auto i = user_threads.begin(); i != user_threads.end(); i++)
+  {
+    std::atomic_thread_fence(std::memory_order_acquire);
+    logger->info("Signalling to thread: {thread_number}", fmt::arg("thread_number", thread_number));
+    int error_code = pthread_kill((*i)->thread, SIGPROF);
+    logger->info("Return value from pthread_kill was: {return_value}", fmt::arg("return_value", error_code));
+    thread_number += 1;
+    std::atomic_thread_fence(std::memory_order_release);
+    jcoz_sleep(5);
   }
   user_threads_lock = 0;
   std::atomic_thread_fence(std::memory_order_release);
@@ -328,18 +356,18 @@ void Profiler::signal_user_threads()
 float Profiler::calculate_random_speedup()
 {
 
-  int randVal = rand() % 40;
+  int randVal = rand() % 25;
 
-  if (randVal < 8)
+  // 20% of all experiments should have 0 speedup
+  // (This is implemented because the results of the other speedups need to be interpreted relative to 0 speedup)
+  if (randVal < 5)
   {
-    return 0;
+    return (float)0;
   }
   else
   {
-    randVal = rand() % 20;
-
-    // Number from 0 to 1.0, increments of .05
-    unsigned int zeroToHundred = (randVal + 1) * 5;
+    // Each of the speedups from 0.05 to 1.0 (increments of .05) have an equal probability of being selected
+    unsigned int zeroToHundred = (randVal - 4) * 5;
 
     return (float)zeroToHundred / 100.f;
   }
@@ -391,8 +419,16 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   }
 
   jcoz_sleep(SIGNAL_FREQ);
+  // memory barrier needed to ensure that `in_experiment` is false before the user threads are signalled again
+  std::atomic_thread_fence(std::memory_order_acquire);
   in_experiment = false;
-  signal_user_threads();
+  std::atomic_thread_fence(std::memory_order_release);
+  std::atomic_thread_fence(std::memory_order_acquire);
+  if (in_experiment == true) {
+    logger->info("!!!! IN_EXPERIMENT IS TRUE EVEN AFTER BEING SET TO FALSE !!!!");
+  }
+  std::atomic_thread_fence(std::memory_order_release);
+  signal_user_threads_end_of_experiment();
   jcoz_sleep(SIGNAL_FREQ);
 
   // TODO this is to avoid calling up to a synchronized java method, resulting in a deadlock,
@@ -814,6 +850,7 @@ void Profiler::add_ignored_scope(std::string &scope)
 
 void Profiler::Handle(int signum, siginfo_t *info, void *context)
 {
+  logger->info(">>>>>> Start of signal being handled");
   if (!prof_ready)
   {
     return;
@@ -859,6 +896,7 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   if (!in_experiment)
   {
     // lock in scope
+    logger->info("---- Resetting local_delay back to 0");
     curr_ut->local_delay = 0;
     bool has_lock = in_scope_lock == pthread_self();
     if (!has_lock)
@@ -895,6 +933,12 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   }
   else
   {
+    logger->info("---- Incorrectly entered the else block");
+    if ((curr_ut->local_delay / 1000000) > experiment_time) {
+      logger->info("//// Local delay: ({local_delay}) > experiment time ({experiment_time})", 
+                  fmt::arg("local_delay", curr_ut->local_delay), fmt::arg("experiment_time", experiment_time));
+      logger->info("//// Current number signals received by this thread: {num_signals}", fmt::arg("num_signals", curr_ut->num_signals_received));
+    }
     curr_ut->num_signals_received++;
     for (int i = 0; i < trace.num_frames; i++)
     {
