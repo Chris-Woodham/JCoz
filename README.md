@@ -59,3 +59,21 @@ and capture some samples!
 Be aware for that a real sized application there will be lots of code and lots
 of experiments that JCoz needs to run. You should plan to keep JCoz running for
 some hours to be confident in the results.
+
+
+## Accuracy of measuring throughput
+
+* The vast majority of the time JCoz accurately measures the throughput of an application during experiments
+  * `throughput (number of progress point hits per unit time) = number progress point hits / effective duration of experiment`
+	* `effective duration = experiment duration - total delay` (*where total delay is the total length of pauses inserted during the experiment*)
+* However, on a small number of occasions JCoz will produce inaccurate results.
+	* JCoz updates the accumulative local_delay for each executing application thread during an experiment and then at the end of the experiment sums these `local_delays` to calculate the `total_delay`
+	* Between experiments - the `local_delay` variable for each application thread is reset to 0, in preparation for the next experiment
+	* However, if an application thread is blocking throughout the period between experiments and then resumes execution during the next experiment, the `local_delay` will not have been reset and an inaccurate throughput will consequently be calculated
+
+**Mitigation:**
+
+* We have implemented a change that means that reduces the frequency of these inaccurate throughput calculations
+  * However, as it always possible than an application thread could block for a period of time (and we would not want the profiler interrupting the execution of a program), it is not possible to completely eliminate mistakes when calculating throughput
+* Before the causal profile data is plotted by the UI - it is filtered, and any clearly incorrect throughput data is removed
+* We enforce a minimum sample size of 30 to plot a graph with the UI (this reduces the likelihood that erroneous throughput values are driving the observed trend)  

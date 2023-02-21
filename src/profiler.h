@@ -152,7 +152,7 @@ private:
 
   SignalHandler handler_;
 
-  struct sigaction old_action_;
+  struct sigaction action_for_sigprof_;
 
   static JNIEnv *jni_;
 
@@ -197,6 +197,8 @@ private:
   static float calculate_random_speedup();
 
   static void signal_user_threads();
+  
+  static void signal_user_threads_end_of_experiment();
 
   static volatile bool end_to_end;
 
