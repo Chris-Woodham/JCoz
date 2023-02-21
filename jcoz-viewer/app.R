@@ -35,7 +35,7 @@ ui <- fluidPage(
   titlePanel(title = "JCoz Causal Profile Viewer", windowTitle = "JCoz Causal Profile Viewer"),
   sidebarLayout(
     sidebarPanel( 
-      sliderInput("minSampleSize", "Minimum sample size to plot a graph", value = 75, min = 50, max = 100),
+      sliderInput("minSampleSize", "Minimum sample size to plot a graph", value = 50, min = 30, max = 100),
       fileInput("dataFile", NULL, accept = ".csv"),
       tags$div(
         actionButton("plotGraphs", "Plot Graphs"),
@@ -46,7 +46,7 @@ ui <- fluidPage(
       tags$div(
         tags$ul(
           tags$li("The fitted blue line represents the general trend of throughput with line speedup"),
-          tags$li("The wider the grey area surrounding the trend line, the lower the confidence we have in the trend)"),
+          tags$li("The wider the grey area surrounding the trend line, the lower the confidence we have in the trend"),
           tags$li("The result of each individual experiment is plotted as a grey data point (overlapping data points appear darker)")
           )
       ),

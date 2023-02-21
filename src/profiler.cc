@@ -310,7 +310,6 @@ void Profiler::setProgressPoint(std::string class_name, jint line_no)
 
 void Profiler::signal_user_threads()
 {
-  logger->info("Signalling user threads .........");
   while (!__sync_bool_compare_and_swap(&user_threads_lock, 0, 1))
     ;
   std::atomic_thread_fence(std::memory_order_acquire);
@@ -318,32 +317,9 @@ void Profiler::signal_user_threads()
   for (auto i = user_threads.begin(); i != user_threads.end(); i++)
   {
     std::atomic_thread_fence(std::memory_order_acquire);
-    logger->info("Signalling to thread: {thread_number}", fmt::arg("thread_number", thread_number));
     int error_code = pthread_kill((*i)->thread, SIGPROF);
-    logger->info("Return value from pthread_kill was: {return_value}", fmt::arg("return_value", error_code));
     thread_number += 1;
     std::atomic_thread_fence(std::memory_order_release);
-  }
-  user_threads_lock = 0;
-  std::atomic_thread_fence(std::memory_order_release);
-}
-
-void Profiler::signal_user_threads_end_of_experiment()
-{
-  logger->info("Signalling user threads .........");
-  while (!__sync_bool_compare_and_swap(&user_threads_lock, 0, 1))
-    ;
-  std::atomic_thread_fence(std::memory_order_acquire);
-  int thread_number = 0;
-  for (auto i = user_threads.begin(); i != user_threads.end(); i++)
-  {
-    std::atomic_thread_fence(std::memory_order_acquire);
-    logger->info("Signalling to thread: {thread_number}", fmt::arg("thread_number", thread_number));
-    int error_code = pthread_kill((*i)->thread, SIGPROF);
-    logger->info("Return value from pthread_kill was: {return_value}", fmt::arg("return_value", error_code));
-    thread_number += 1;
-    std::atomic_thread_fence(std::memory_order_release);
-    jcoz_sleep(5);
   }
   user_threads_lock = 0;
   std::atomic_thread_fence(std::memory_order_release);
@@ -419,16 +395,11 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   }
 
   jcoz_sleep(SIGNAL_FREQ);
-  // memory barrier needed to ensure that `in_experiment` is false before the user threads are signalled again
+  // memory barrier to ensure that `in_experiment` is false before the user threads are signalled again
   std::atomic_thread_fence(std::memory_order_acquire);
   in_experiment = false;
   std::atomic_thread_fence(std::memory_order_release);
-  std::atomic_thread_fence(std::memory_order_acquire);
-  if (in_experiment == true) {
-    logger->info("!!!! IN_EXPERIMENT IS TRUE EVEN AFTER BEING SET TO FALSE !!!!");
-  }
-  std::atomic_thread_fence(std::memory_order_release);
-  signal_user_threads_end_of_experiment();
+  signal_user_threads();
   jcoz_sleep(SIGNAL_FREQ);
 
   // TODO this is to avoid calling up to a synchronized java method, resulting in a deadlock,
@@ -519,10 +490,10 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
   while (_running)
   {
     logger->debug("Starting new agent thread _running loop...");
-    // 15 * SIGNAL_FREQ with randomization should give us roughly
-    // the same number of iterations as doing 10 * SIGNAL_FREQ without
+    // 30 * SIGNAL_FREQ with randomization should give us roughly
+    // the same number of iterations as doing 20 * SIGNAL_FREQ without
     // randomization.
-    long total_needed_time = 15 * SIGNAL_FREQ;
+    long total_needed_time = 30 * SIGNAL_FREQ;
     long total_accrued_time = 0;
     while (total_accrued_time < total_needed_time)
     {
@@ -850,9 +821,9 @@ void Profiler::add_ignored_scope(std::string &scope)
 
 void Profiler::Handle(int signum, siginfo_t *info, void *context)
 {
-  logger->info(">>>>>> Start of signal being handled");
   if (!prof_ready)
   {
+    logger->debug("Profiler::Handle - Profiler not ready; signal not handled");
     return;
   }
   IMPLICITLY_USE(signum);
@@ -861,7 +832,7 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   JNIEnv *env = Accessors::CurrentJniEnv();
   if (env == NULL)
   {
-
+    logger->debug("Profiler::Handle - Current JNI env is NULL; signal not handled");
     return;
   }
 
@@ -889,6 +860,7 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
     int idx = -trace.num_frames;
     if (idx > kNumCallTraceErrors)
     {
+      logger->debug("Profiler::Handle - Num frames < 0 and error code outside of range of enum kNumCallTraceErrors; signal not handled");
       return;
     }
   }
@@ -896,7 +868,6 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   if (!in_experiment)
   {
     // lock in scope
-    logger->info("---- Resetting local_delay back to 0");
     curr_ut->local_delay = 0;
     bool has_lock = in_scope_lock == pthread_self();
     if (!has_lock)
@@ -933,12 +904,6 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   }
   else
   {
-    logger->info("---- Incorrectly entered the else block");
-    if ((curr_ut->local_delay / 1000000) > experiment_time) {
-      logger->info("//// Local delay: ({local_delay}) > experiment time ({experiment_time})", 
-                  fmt::arg("local_delay", curr_ut->local_delay), fmt::arg("experiment_time", experiment_time));
-      logger->info("//// Current number signals received by this thread: {num_signals}", fmt::arg("num_signals", curr_ut->num_signals_received));
-    }
     curr_ut->num_signals_received++;
     for (int i = 0; i < trace.num_frames; i++)
     {
@@ -997,7 +962,7 @@ void Profiler::Start()
 
   logger->info("Starting profiler...");
   old_action_ = handler_.SetAction(&Profiler::Handle);
-  std::srand(unsigned(std::time(0)));
+  // std::srand(unsigned(std::time(0)));
   call_frames.reserve(2000);
   _running = true;
 }
