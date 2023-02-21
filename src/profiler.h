@@ -152,7 +152,7 @@ private:
 
   SignalHandler handler_;
 
-  struct sigaction old_action_;
+  struct sigaction action_for_sigprof_;
 
   static JNIEnv *jni_;
 

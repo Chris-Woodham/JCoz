@@ -956,13 +956,8 @@ struct sigaction SignalHandler::SetAction(
 
 void Profiler::Start()
 {
-
-  // old_action_ is stored, but never used.  This is in case of future
-  // refactorings that need it.
-
   logger->info("Starting profiler...");
-  old_action_ = handler_.SetAction(&Profiler::Handle);
-  // std::srand(unsigned(std::time(0)));
+  action_for_sigprof_ = handler_.SetAction(&Profiler::Handle);
   call_frames.reserve(2000);
   _running = true;
 }
