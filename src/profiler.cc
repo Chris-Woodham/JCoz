@@ -343,9 +343,7 @@ float Profiler::calculate_random_speedup()
   else
   {
     // Each of the speedups from 0.05 to 1.0 (increments of .05) have an equal probability of being selected
-    unsigned int zeroToHundred = (randVal - 4) * 5;
-
-    return (float)zeroToHundred / 100.f;
+    return (float) (randVal - 4)/20.f;
   }
 }
 
