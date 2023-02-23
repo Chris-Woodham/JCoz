@@ -1,0 +1,18 @@
+FROM docker.io/library/ubuntu:20.04
+
+ENV DEBIAN_FRONTEND noninteractive
+
+MAINTAINER Project Soteria (THG) DL-Soteria@thehutgroup.com
+
+WORKDIR /app
+
+COPY ./provision-app.R .
+COPY ./app.R .
+
+RUN apt-get update
+RUN apt-get install --fix-missing 
+RUN apt-get install -y r-base
+RUN Rscript provision-app.R
+
+CMD ["Rscript", "app.R", "7075"]
+EXPOSE 7075
