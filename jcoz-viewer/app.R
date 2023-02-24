@@ -250,5 +250,3 @@ server <- function(input, output, session) {
 
 # Note - command_line_args[1] is the port that this shiny app will run on
 runApp(appDir = shinyApp(ui = ui, server = server), port = as.numeric(command_line_args[1]), host = "0.0.0.0")
-
-

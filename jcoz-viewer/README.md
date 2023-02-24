@@ -5,10 +5,10 @@
 To run the JCoz viewer:
 
 1. Ensure you have `podman` set up and working on your machine.
-2. Pull the latest `jcozui-arm64` or `jcozui-amd64` from ... using: 
+2. Pull the latest [`jcozui-arm64`](https://github.com/chris-woodham/JCoz/pkgs/container/jcozui-arm64)) or [`jcozui-amd64`](https://github.com/chris-woodham/JCoz/pkgs/container/jcozui-amd64):
 
 ```bash
-podman pull ghcr.io/chris-woodham/jcozui-$chosen_arch:latest
+podman pull ghcr.io/chris-woodham/jcozui-$chosen_arch:$tag_number
 ```
 
 3. Then run Jcoz viewer using the command:
