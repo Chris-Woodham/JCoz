@@ -57,7 +57,7 @@ __thread JNIEnv *Accessors::env_;
 // Maximum possible bytecode index (JVMS14, 4.7.3)
 #define MAX_BCI 65535
 
-typedef std::chrono::duration<int, std::milli> milliseconds_type;
+typedef std::chrono::duration<long, std::milli> milliseconds_type;
 typedef std::chrono::duration<long, std::nano> nanoseconds_type;
 
 ASGCTType Asgct::asgct_;
@@ -217,14 +217,7 @@ void Profiler::ParseOptions(const char *options)
 
   // Set up column names for .csv data output file
   std::stringstream column_names;
-  column_names << "selectedClassLineNo"
-               << ","
-               << "speedup"
-               << ","
-               << "duration"
-               << ","
-               << "progressPointHits"
-               << "\n";
+  column_names << "selectedClassLineNo" << "," << "speedup" << "," << "duration" << "," << "effectiveDuration" << "," << "progressPointHits" << "\n";
   std::ofstream output_file;
   output_file.open(kOutputFile.data(), std::ios_base::app);
   output_file << column_names.rdbuf();
@@ -320,9 +313,13 @@ void Profiler::signal_user_threads()
   while (!__sync_bool_compare_and_swap(&user_threads_lock, 0, 1))
     ;
   std::atomic_thread_fence(std::memory_order_acquire);
+  int thread_number = 0;
   for (auto i = user_threads.begin(); i != user_threads.end(); i++)
   {
-    pthread_kill((*i)->thread, SIGPROF);
+    std::atomic_thread_fence(std::memory_order_acquire);
+    int error_code = pthread_kill((*i)->thread, SIGPROF);
+    thread_number += 1;
+    std::atomic_thread_fence(std::memory_order_release);
   }
   user_threads_lock = 0;
   std::atomic_thread_fence(std::memory_order_release);
@@ -335,20 +332,18 @@ void Profiler::signal_user_threads()
 float Profiler::calculate_random_speedup()
 {
 
-  int randVal = rand() % 40;
+  int randVal = rand() % 25;
 
-  if (randVal < 10)
+  // 20% of all experiments should have 0 speedup
+  // (This is implemented because the results of the other speedups need to be interpreted relative to 0 speedup)
+  if (randVal < 5)
   {
-    return 0;
+    return (float)0;
   }
   else
   {
-    randVal = rand() % 20;
-
-    // Number from 0 to 1.0, increments of .05
-    unsigned int zeroToHundred = (randVal + 1) * 5;
-
-    return (float)zeroToHundred / 100.f;
+    // Each of the speedups from 0.05 to 1.0 (increments of .05) have an equal probability of being selected
+    return (float) (randVal - 4)/20.f;
   }
 }
 
@@ -388,15 +383,20 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   milliseconds_type duration(experiment_time);
   auto start = std::chrono::high_resolution_clock::now();
   auto end = start + duration;
+
   while (_running && ((end_to_end && (points_hit == 0)) || (std::chrono::high_resolution_clock::now() < end)))
   {
     jcoz_sleep(SIGNAL_FREQ);
 
     signal_user_threads();
+
   }
 
   jcoz_sleep(SIGNAL_FREQ);
+  // memory barrier to ensure that `in_experiment` is false before the user threads are signalled again
+  std::atomic_thread_fence(std::memory_order_acquire);
   in_experiment = false;
+  std::atomic_thread_fence(std::memory_order_release);
   signal_user_threads();
   jcoz_sleep(SIGNAL_FREQ);
 
@@ -409,6 +409,7 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   }
 
   auto expEnd = std::chrono::high_resolution_clock::now();
+
   current_experiment.delay = global_delay;
   current_experiment.points_hit = points_hit;
   points_hit = 0;
@@ -437,7 +438,8 @@ void Profiler::runExperiment(JNIEnv *jni_env)
   logger->flush();
   // Append the experiment results to the output file
   std::stringstream experiment_data;
-  experiment_data << sig << ":" << current_experiment.lineno << "," << current_experiment.speedup << "," << current_experiment.duration << "," << current_experiment.points_hit << "\n";
+  long effectiveDuration = current_experiment.duration - current_experiment.delay;
+  experiment_data << sig << ":" << current_experiment.lineno << "," << current_experiment.speedup << "," << current_experiment.duration << "," << effectiveDuration << "," << current_experiment.points_hit << "\n";
   std::ofstream output_file;
   output_file.open(kOutputFile.data(), std::ios_base::app);
   output_file << experiment_data.rdbuf();
@@ -489,10 +491,10 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
   while (_running)
   {
     logger->debug("Starting new agent thread _running loop...");
-    // 15 * SIGNAL_FREQ with randomization should give us roughly
-    // the same number of iterations as doing 10 * SIGNAL_FREQ without
+    // 30 * SIGNAL_FREQ with randomization should give us roughly
+    // the same number of iterations as doing 20 * SIGNAL_FREQ without
     // randomization.
-    long total_needed_time = 15 * SIGNAL_FREQ;
+    long total_needed_time = 30 * SIGNAL_FREQ;
     long total_accrued_time = 0;
     while (total_accrued_time < total_needed_time)
     {
@@ -822,6 +824,7 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
 {
   if (!prof_ready)
   {
+    logger->debug("Profiler::Handle - Profiler not ready; signal not handled");
     return;
   }
   IMPLICITLY_USE(signum);
@@ -830,7 +833,7 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   JNIEnv *env = Accessors::CurrentJniEnv();
   if (env == NULL)
   {
-
+    logger->debug("Profiler::Handle - Current JNI env is NULL; signal not handled");
     return;
   }
 
@@ -858,13 +861,13 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
     int idx = -trace.num_frames;
     if (idx > kNumCallTraceErrors)
     {
+      logger->debug("Profiler::Handle - Num frames < 0 and error code outside of range of enum kNumCallTraceErrors; signal not handled");
       return;
     }
   }
 
   if (!in_experiment)
   {
-
     // lock in scope
     curr_ut->local_delay = 0;
     bool has_lock = in_scope_lock == pthread_self();
@@ -902,7 +905,6 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context)
   }
   else
   {
-
     curr_ut->num_signals_received++;
     for (int i = 0; i < trace.num_frames; i++)
     {
@@ -955,13 +957,8 @@ struct sigaction SignalHandler::SetAction(
 
 void Profiler::Start()
 {
-
-  // old_action_ is stored, but never used.  This is in case of future
-  // refactorings that need it.
-
   logger->info("Starting profiler...");
-  old_action_ = handler_.SetAction(&Profiler::Handle);
-  std::srand(unsigned(std::time(0)));
+  action_for_sigprof_ = handler_.SetAction(&Profiler::Handle);
   call_frames.reserve(2000);
   _running = true;
 }

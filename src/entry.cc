@@ -58,7 +58,7 @@ void JNICALL OnThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env,
 void JNICALL OnThreadEnd(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread)
 {
   auto logger = prof->getLogger();
-  logger->info("OnThreadEnd fired");
+  logger->debug("OnThreadEnd fired");
   IMPLICITLY_USE(jvmti_env);
   IMPLICITLY_USE(jni_env);
   IMPLICITLY_USE(thread);

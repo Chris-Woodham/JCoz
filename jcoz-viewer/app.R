@@ -35,7 +35,7 @@ ui <- fluidPage(
   titlePanel(title = "JCoz Causal Profile Viewer", windowTitle = "JCoz Causal Profile Viewer"),
   sidebarLayout(
     sidebarPanel( 
-      sliderInput("minSampleSize", "Minimum sample size to plot a graph", value = 20, min = 0, max = 100),
+      sliderInput("minSampleSize", "Minimum sample size to plot a graph", value = 50, min = 30, max = 100),
       fileInput("dataFile", NULL, accept = ".csv"),
       tags$div(
         actionButton("plotGraphs", "Plot Graphs"),
@@ -46,7 +46,7 @@ ui <- fluidPage(
       tags$div(
         tags$ul(
           tags$li("The fitted blue line represents the general trend of throughput with line speedup"),
-          tags$li("The wider the grey area surrounding the trend line, the lower the confidence we have in the trend)"),
+          tags$li("The wider the grey area surrounding the trend line, the lower the confidence we have in the trend"),
           tags$li("The result of each individual experiment is plotted as a grey data point (overlapping data points appear darker)")
           )
       ),
@@ -73,6 +73,10 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
+  # load data and filter two types of result:
+  # 1) experiments where effectiveDuration <= 0
+  # 2) experiments with a speedup of 0.0 where effectiveDuration != duration
+  # then calculate throughput
   getJcozData <- reactive(function() {
     
     # ensure that getJcozData() can only be called once the user has input the `dataFile`
@@ -84,9 +88,10 @@ server <- function(input, output, session) {
            csv = {jcozData = read.csv(input$dataFile$datapath, header = TRUE, stringsAsFactors = TRUE)},
            validate("Invalid file format; please upload a .csv file")
     )
-    
+    jcozData <- filter(jcozData, effectiveDuration > 0)
+    jcozData <- jcozData[!(jcozData$speedup == 0 & jcozData$effectiveDuration < jcozData$duration),]
     # calculate throughput (Number of progress points hit per second)
-    jcozData$throughput = (jcozData$progressPointHits / jcozData$duration) * 1000000000
+    jcozData$throughput = (jcozData$progressPointHits / jcozData$effectiveDuration) * 1000000000
     jcozData
   })
   
@@ -107,9 +112,7 @@ server <- function(input, output, session) {
       
         # load and filter data
         data <- getJcozData()
-        # calculate min and max throughput (so that all the graphs have the same scale on the y-axis)
-        min_throughput = min(data()$throughput) * 0.99
-        max_throughput = max(data()$throughput) * 1.01
+        
         # filter the data to identify methods that: a) have 3 or more data points for 0 speed-up; and b) have a sample size greater than the user specified minimum sample size
         filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
         unique_methods <- unique(filtered_data$selectedClassLineNo)
@@ -117,8 +120,18 @@ server <- function(input, output, session) {
         
         # create a list of ggplot objects - one for each of the unique_methods in the filtered data set
         plot_list <- list()
-        plot_list <- lapply(unique_methods, function(method){
-          method_data = dplyr::filter(data(), selectedClassLineNo == method)
+        plot_list <- lapply(unique_methods, function(method) {
+          # obtain the data for this specific method (JavaClass:LineNo) and then:
+          # filter method_data to remove any extreme outliers (as these results occur when JCoz (or coz) incorrectly calculates effectiveDuration)
+          # (Note - mean rather than median has been used for identifying outliers, as calculating the mean should have a lower time complexity than calculating the median)
+          method_data <- dplyr::filter(data(), selectedClassLineNo == method)
+          mean_throughput <- mean(method_data$throughput)
+          percentile_95_difference <- quantile(method_data$throughput, 0.95) - mean_throughput
+          percentile_5_difference <- mean_throughput - quantile(method_data$throughput, 0.05)
+          method_data <- method_data[!(method_data$throughput < (mean_throughput - (2 * percentile_5_difference)) | method_data$throughput > (mean_throughput + (2 * percentile_95_difference))), ]
+          # calculate min and max throughput for the scale of the y-axis
+          min_throughput <- min(method_data$throughput) * 0.99
+          max_throughput <- max(method_data$throughput) * 1.01
           subtitle <- paste0(" Sample size: ", nrow(method_data))
           renderPlot({
             ggplot() +
@@ -174,9 +187,7 @@ server <- function(input, output, session) {
         
         # load and filter data
         data <- getJcozData()
-        # calculate min and max throughput (so that all the graphs have the same scale on the y-axis)
-        min_throughput = min(data()$throughput) * 0.99
-        max_throughput = max(data()$throughput) * 1.01
+        
         # filter the data to identify methods that: a) have 3 or more data points for 0 speed-up; and b) have a sample size greater than the user specified minimum sample size
         filtered_data <- data() %>% add_count(selectedClassLineNo, sort = TRUE) %>% group_by(selectedClassLineNo) %>% dplyr::filter(n >= input$minSampleSize) %>% dplyr::filter(speedup == 0) %>% dplyr::filter(n() >= 3)
         unique_methods <- unique(filtered_data$selectedClassLineNo)
@@ -184,8 +195,18 @@ server <- function(input, output, session) {
         
         # create a list of ggplot objects - one for each of the unique_methods in the filtered data set
         plot_list <- list()
-        plot_list <- lapply(unique_methods, function(method){
-          method_data = dplyr::filter(data(), selectedClassLineNo == method)
+        plot_list <- lapply(unique_methods, function(method) {
+          # obtain the data for this specific method (JavaClass:LineNo) and then:
+          # filter method_data to remove any extreme outliers (as these results occur when JCoz (or coz) incorrectly calculates effectiveDuration)
+          # (Note - mean rather than median has been used for identifying outliers, as calculating the mean should have a lower time complexity than calculating the median)
+          method_data <- dplyr::filter(data(), selectedClassLineNo == method)
+          mean_throughput <- mean(method_data$throughput)
+          percentile_95_difference <- quantile(method_data$throughput, 0.95) - mean_throughput
+          percentile_5_difference <- mean_throughput - quantile(method_data$throughput, 0.05)
+          method_data <- method_data[!(method_data$throughput < (mean_throughput - (2 * percentile_5_difference)) | method_data$throughput > (mean_throughput + (2 * percentile_95_difference))), ]
+          # calculate min and max throughput for the scale of the y-axis
+          min_throughput <- min(method_data$throughput) * 0.99
+          max_throughput <- max(method_data$throughput) * 1.01
           subtitle <- paste0(" Sample size: ", nrow(method_data))
           return(
             ggplot() +
@@ -228,5 +249,4 @@ server <- function(input, output, session) {
 #### Run ShinyApp
 
 # Note - command_line_args[1] is the port that this shiny app will run on
-runApp(appDir = shinyApp(ui = ui, server = server), port = as.numeric(command_line_args[1]))
-
+runApp(appDir = shinyApp(ui = ui, server = server), port = as.numeric(command_line_args[1]), host = "0.0.0.0")

@@ -1,9 +1,35 @@
 # JCoz Viewer
 
-The JCoz viewer web app can be run using the following command:
-`Rscript app.R $port_number`
+## Running JCoz Viewer using podman
 
-Before it can be run on a machine - R (and the R packages the app uses) will need to be installed.
+To run the JCoz viewer:
+
+1. Ensure you have `podman` set up and working on your machine.
+2. Pull the latest [`jcozui-arm64`](https://github.com/chris-woodham/JCoz/pkgs/container/jcozui-arm64)) or [`jcozui-amd64`](https://github.com/chris-woodham/JCoz/pkgs/container/jcozui-amd64):
+
+```bash
+podman pull ghcr.io/chris-woodham/jcozui-$chosen_arch:$tag_number
+```
+
+3. Then run Jcoz viewer using the command:
+
+```bash
+podman run --rm -p 0.0.0.0:7075:7075 ghcr.io/chris-woodham/jcozui-$chosen_arch:$tag_number
+```
+
+## Building a JCoz viewer `podman` image
+
+```bash
+podman machine start
+
+podman build --arch=$chosen_arch --file=/Users/woodhamc/Documents/soteria-other/JCoz/jcoz-viewer/Containerfile --tag=jcozui-$chosen_arch:$tag_number
+
+echo $github_personal_access_token | podman login --username=$github_username --password-stdin ghcr.io
+
+podman push localhost/jcozui-$chosen_arch:$tag_number ghcr.io/$github_username/jcozui-$chosen_arch:$tag_number
+
+podman macine stop
+```
 
 Resources I found useful when building the JCoz Viewer Shiny app:
 
