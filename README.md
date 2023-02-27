@@ -18,7 +18,7 @@ On an ubuntu machine,
 sudo apt install -y make g++ libspdlog-dev
 ```
 
-Note: Ubuntu 22 is currently not supported as a symbol lookup error (de-mangled symbol: `fmt::v8::detail::dragonbox::decimal_fp<float>`) is thrown. JCoz has been tested on Ubuntu 20 and 18
+Note: Ubuntu 22 is currently not supported as a symbol lookup error (de-mangled symbol: `fmt::v8::detail::dragonbox::decimal_fp<float>`) is thrown. JCoz has been tested on Ubuntu 20
 
 ### Building the native agent
 
@@ -49,7 +49,7 @@ This would set a progress point in line 11 of the class `Main` in the package `d
 
 For all the available options, see the [_options_ section below](#cli-options)
 
-For use with Tomcat, the agent path option needs to be added to `CATALINA_OPTS`. If it's not possible to change `CATALINA_OPTS` the program is launched with, it can be appended to using setenv.sh place within the tomcat bin, see example below.
+For use with Tomcat, the agent path option needs to be added to `CATALINA_OPTS`. If it's not possible to change `CATALINA_OPTS` the program is launched with, it can be appended `CATALINA_OPTS` to using `setenv.sh` place within the tomcat bin, see example below.
 
   ```bash
   #!/bin/sh
@@ -80,8 +80,8 @@ Note:
 | Option | Is required? | Default | What does it do? | Example |
 |---|:---:|:---:|---|---|
 | `pkg` | ✓  if no `search` | ― | Specifies which single package is within scope for Java to profile | java.util |
-| `search` | ✓  if no `pkg` | ― | Allows specifying multiple scopes to profile using `|` as a delimiter | java.util.concurrent\|java.util.stream |
-| `ignore` | ✗ | ― | Scopes to ignore when profiling the application using `|` as a delimiter | java.util.function\|java.util.random |
+| `search` | ✓  if no `pkg` | ― | Allows specifying multiple scopes to profile using `\|` as a delimiter | java.util.concurrent\|java.util.stream |
+| `ignore` | ✗ | ― | Scopes to ignore when profiling the application using `\|` as a delimiter | java.util.function\|java.util.random |
 | `progress-point` | ✓ | ― |  | Lcom/google/Main:12 |
 | `logging-level` | ✗ | info | Sets the logging level of profiler's logger. Only those in next column are accepted | trace, debug, info, warn, error, critical, off |
 | `output-file` | ✗ | jcoz-output.coz | Specifies path and name of output file. Ensure this is in a writable location. The actual name of the output file will have the time stamp of when the program was started appended to it | /home/ubuntu/profiler-output.coz |
