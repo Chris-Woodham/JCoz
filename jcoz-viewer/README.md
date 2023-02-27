@@ -7,15 +7,15 @@ To run the JCoz viewer:
 1. Ensure you have `podman` set up and working on your machine.
 2. Pull the latest [`jcozui-arm64`](https://github.com/chris-woodham/JCoz/pkgs/container/jcozui-arm64)) or [`jcozui-amd64`](https://github.com/chris-woodham/JCoz/pkgs/container/jcozui-amd64):
 
-```bash
-podman pull ghcr.io/chris-woodham/jcozui-$chosen_arch:$tag_number
-```
+    ```bash
+    podman pull ghcr.io/chris-woodham/jcozui-$chosen_arch:$tag_number
+    ```
 
 3. Then run Jcoz viewer using the command:
 
-```bash
-podman run --rm -p 0.0.0.0:7075:7075 ghcr.io/chris-woodham/jcozui-$chosen_arch:$tag_number
-```
+    ```bash
+    podman run --rm -p 0.0.0.0:7075:7075 ghcr.io/chris-woodham/jcozui-$chosen_arch:$tag_number
+    ```
 
 ## Building a JCoz viewer `podman` image
 
@@ -28,8 +28,10 @@ echo $github_personal_access_token | podman login --username=$github_username --
 
 podman push localhost/jcozui-$chosen_arch:$tag_number ghcr.io/$github_username/jcozui-$chosen_arch:$tag_number
 
-podman macine stop
+podman machine stop
 ```
+
+## Useful resources
 
 Resources I found useful when building the JCoz Viewer Shiny app:
 
