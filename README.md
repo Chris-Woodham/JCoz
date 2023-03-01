@@ -18,15 +18,27 @@ On an ubuntu machine,
 sudo apt install -y make g++ libspdlog-dev
 ```
 
-Note: Ubuntu 22 is currently not supported as a symbol lookup error (de-mangled symbol: `fmt::v8::detail::dragonbox::decimal_fp<float>`) is thrown. JCoz has been tested on Ubuntu 20
+You also need a JDK installed on the machine.
+
+*Note* - if you are running JCoz on Ubuntu 18, you will need to clone the `spdlog` GitHub repo and copy some of the include files over to `/usr/local/include` (as `sudo apt install libspdlog-dev` does not install all header files on Ubuntu 18) using:
+
+```sh
+git clone https://github.com/gabime/spdlog.git
+sudo cp -r $path_to_spdlog/include/. /usr/local/include
+```
 
 ### Building the native agent
 
-Once all the dependencies have been installed, the native is built using make
+Once all the dependencies have been installed, the native agent is built using make
 
 ```sh
+# On Ubuntu 20+
 make clean
-make all
+make all-20+
+
+# On Ubuntu 18
+make clean
+male all-18
 ```
 
 This will build a native agent, which can be found in `build-<bits_in_platfrom_architecture>` directory.
