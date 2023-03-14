@@ -18,15 +18,27 @@ On an ubuntu machine,
 sudo apt install -y make g++ libspdlog-dev
 ```
 
-Note: Ubuntu 22 is currently not supported as a symbol lookup error (de-mangled symbol: `fmt::v8::detail::dragonbox::decimal_fp<float>`) is thrown. JCoz has been tested on Ubuntu 20
+You also need a JDK installed on the machine.
+
+*Note* - if you are running JCoz on Ubuntu 18, you will need to clone the `spdlog` GitHub repo and copy some of the include files over to `/usr/local/include` (as `sudo apt install libspdlog-dev` does not install all header files on Ubuntu 18) using:
+
+```sh
+git clone https://github.com/gabime/spdlog.git
+sudo cp -r $path_to_spdlog/include/. /usr/local/include
+```
 
 ### Building the native agent
 
-Once all the dependencies have been installed, the native is built using make
+Once all the dependencies have been installed, the native agent is built using make
 
 ```sh
+# On Ubuntu 20+
 make clean
-make all
+make all-20+
+
+# On Ubuntu 18
+make clean
+male all-18
 ```
 
 This will build a native agent, which can be found in `build-<bits_in_platfrom_architecture>` directory.
@@ -39,9 +51,24 @@ To launch your application with the JCoz profiler, Java's `-agentpath` argument 
 java -agentpath:pathname[=options] Main
 ```
 
-Using the Java application in the [example folder](example/) and only specifying the required options, the command would be,
+### Running the examples
+
+1. You can run the Java application in [JCoz/example/src/simple-single-threaded-example](./example/src/simple-single-thread-example/) using only the required options with the following commands
 
 ```sh
+cd JCoz/example/src/simple-single-threaded-example
+java -agentpath:$pathToJCoz/JCoz/build-64/liblagent.so=progress-point=LMain:21_pkg=model Main
+```
+
+2. You can run the Java application in [JCoz/example/src/simple-multi-threaded-example](./example/src/simple-multi-threaded-example/) using only the required options with the following commands
+
+```sh
+cd JCoz/example/src/simple-multi-threaded-example
+java -agentpath:$pathToJCoz/JCoz/build-64/liblagent.so=progress-point=LMain:11_pkg=model Main
+```
+
+```sh
+cd JCoz/example/src/simple-multi-threaded-example
 user@ubuntu:~/Jcoz/example/src $ java -agentpath:/path/to/libagent.so=progress-point=Ldummy/Main:11_pkg=dummy dummy/Main
 ```
 
@@ -57,15 +84,16 @@ For use with Tomcat, the agent path option needs to be added to `CATALINA_OPTS`.
   export CATALINA_OPTS="$CATALINA_OPTS -agentpath:/path/to/libagent.so=progress-point=Ldummy/Main:11_pkg=dummy dummy/Main"
   ```
 
-### Dammit it crashes
+### Troubleshooting if JCoz does not work
 
 1. Options to agent path are delimited using an underscore `_`
-   - If the value of any of the options contain an underscore, this will result in incorrect parsing
+   - And therefore if the value of any of the options contain an underscore, this will result in incorrect parsing
 2. Value is associated with an option to the agent using an equals `=`
 3. If program crashes immediately, make sure the version of jvm which will run your application is the same as the path to `path_to_java/lib` or `path_to_java/lib/server` in `LD_LIBRARY_PATH/DYLD_LIBRARY_PATH`. It might be that agent is unable to find `libjvm.so`/`libjvm.dylib` library
 4. If the program does not have write permissions to the folder it is executed in, it will fail. This is due to the default path of the output and logger file being the current working directory
    - Output file path can be changed using [CLI options](#cli-options)
    - Logger file path can only be changed in [src/globals.h](src/globals.h) (see [agent options](#advanced-agent-options) below) and will require rebuilding the agent
+5. JCoz can be run using Java 8, 11 and 17 - but make sure that the java version used when building JCoz is the same as the java (and javac) version used to compile and run your application
 
 ### CLI Options
 

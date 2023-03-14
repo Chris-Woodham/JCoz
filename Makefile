@@ -23,7 +23,7 @@ PWD:=$(shell pwd)
 TARGET=liblagent.so
 
 PLATFORM_COPTS:=-mfpmath=sse \
-	-std=gnu++0x
+	-std=c++11
 PLATFORM_WARNINGS:=-Wframe-larger-than=16384 \
 	-Wno-unused-but-set-variable \
 	-Wunused-but-set-parameter \
@@ -83,12 +83,16 @@ OBJECTS = $(patsubst $(SRC_DIR)/%,$(BUILD_DIR)/%,$(_OBJECTS))
 $(BUILD_DIR)/%.pic.o: $(SRC_DIR)/%.cc
 	$(CC) $(INCLUDES) $(COPTS) -c $< -o $@
 
-all: native
-
-native: $(OBJECTS)
+all-18: $(OBJECTS)
 	$(CC) $(COPTS) -shared \
 	  -o $(BUILD_DIR)/$(TARGET) \
 	  -Bsymbolic $(OBJECTS) $(LIBS)
+
+all-20+: $(OBJECTS)
+	$(CC) $(COPTS) -shared \
+	  -o $(BUILD_DIR)/$(TARGET) \
+	  -Bsymbolic $(OBJECTS) $(LIBS) \
+	  -lfmt
 
 clean:
 	rm -rf $(BUILD_DIR)/*

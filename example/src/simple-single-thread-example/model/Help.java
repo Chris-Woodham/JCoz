@@ -1,4 +1,4 @@
-package dummy.nested;
+package model;
 
 import java.util.Random;
 
