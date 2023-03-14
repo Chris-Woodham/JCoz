@@ -1,6 +1,4 @@
-package dummy;
-
-import dummy.nested.Help;
+import model.Help;
 
 public class Main {
     public static void main(String[] args) {

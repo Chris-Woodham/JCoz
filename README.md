@@ -51,9 +51,24 @@ To launch your application with the JCoz profiler, Java's `-agentpath` argument 
 java -agentpath:pathname[=options] Main
 ```
 
-Using the Java application in the [example folder](example/) and only specifying the required options, the command would be,
+### Running the examples
+
+1. You can run the Java application in [JCoz/example/src/simple-single-threaded-example](./example/src/simple-single-thread-example/) using only the required options with the following commands
 
 ```sh
+cd JCoz/example/src/simple-single-threaded-example
+java -agentpath:$pathToJCoz/JCoz/build-64/liblagent.so=progress-point=LMain:21_pkg=model Main
+```
+
+2. You can run the Java application in [JCoz/example/src/simple-multi-threaded-example](./example/src/simple-multi-threaded-example/) using only the required options with the following commands
+
+```sh
+cd JCoz/example/src/simple-multi-threaded-example
+java -agentpath:$pathToJCoz/JCoz/build-64/liblagent.so=progress-point=LMain:11_pkg=model Main
+```
+
+```sh
+cd JCoz/example/src/simple-multi-threaded-example
 user@ubuntu:~/Jcoz/example/src $ java -agentpath:/path/to/libagent.so=progress-point=Ldummy/Main:11_pkg=dummy dummy/Main
 ```
 
@@ -69,15 +84,16 @@ For use with Tomcat, the agent path option needs to be added to `CATALINA_OPTS`.
   export CATALINA_OPTS="$CATALINA_OPTS -agentpath:/path/to/libagent.so=progress-point=Ldummy/Main:11_pkg=dummy dummy/Main"
   ```
 
-### Dammit it crashes
+### Troubleshooting if JCoz does not work
 
 1. Options to agent path are delimited using an underscore `_`
-   - If the value of any of the options contain an underscore, this will result in incorrect parsing
+   - And therefore if the value of any of the options contain an underscore, this will result in incorrect parsing
 2. Value is associated with an option to the agent using an equals `=`
 3. If program crashes immediately, make sure the version of jvm which will run your application is the same as the path to `path_to_java/lib` or `path_to_java/lib/server` in `LD_LIBRARY_PATH/DYLD_LIBRARY_PATH`. It might be that agent is unable to find `libjvm.so`/`libjvm.dylib` library
 4. If the program does not have write permissions to the folder it is executed in, it will fail. This is due to the default path of the output and logger file being the current working directory
    - Output file path can be changed using [CLI options](#cli-options)
    - Logger file path can only be changed in [src/globals.h](src/globals.h) (see [agent options](#advanced-agent-options) below) and will require rebuilding the agent
+5. JCoz can be run using Java 8, 11 and 17 - but make sure that the java version used when building JCoz is the same as the java (and javac) version used to compile and run your application
 
 ### CLI Options
 
