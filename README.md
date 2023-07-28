@@ -42,7 +42,7 @@ make all-22
 
 # On Ubuntu 18 and 20
 make clean
-male all-18-20
+make all-18-20
 ```
 
 This will build a native agent, which can be found in `build-<bits_in_platfrom_architecture>` directory.
@@ -142,7 +142,11 @@ Note: Asgct is `AsyncGetCallTrace` API for more info on how that works [this blo
 
 ### Visualising profiler output
 
+For a guide on how to run the JCoz-viewer graph UI please see this [README](jcoz-viewer/README.md).
+
 ### Interpretation of results
+
+*TODO: add guide for interpreting JCoz results*
 
 ### Accuracy of measuring throughput
 
