@@ -422,8 +422,6 @@ void Profiler::runExperiment(JNIEnv *jni_env)
     return;
   cleanSignature(sig);
 
-  // printf("Total experiment delay: %ld, total duration: %ld\n", current_experiment.delay, current_experiment.duration);
-
   // Maybe update the experiment length
   Profiler::update_experiment_length();
 
@@ -447,7 +445,7 @@ void Profiler::runExperiment(JNIEnv *jni_env)
 
   delete[] current_experiment.location_ranges;
 
-  logger->debug("Finished experiment, flushed logs, and delete current location ranges.");
+  logger->debug("Finished experiment, flushed logs, and deleted current location ranges.");
 }
 
 // == and < operators for JVMPICallFrame - needed for sort and unique
@@ -554,11 +552,13 @@ Profiler::runAgentThread(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *args)
       // If we don't find anything in scope, try again
       if (entries == NULL)
       {
-        // TODO(dcv): Should we clear the call frames here?
-        logger->info("No in scope frames found. Trying again.");
+        // Clear call frames here before we return to the beginning of the while loop and sample for call frames again
+        // Previous comment ... TODO(dcv): Should we clear the call frames here?
+        logger->info("No in scope frames found. Clearing call frames and then trying again.");
+        call_frames.clear();
         continue;
       }
-
+      
       logger->debug("Found in scope frames. Choosing a frame and running experiment...");
       current_experiment.method_id = exp_frame.method_id;
       current_experiment.bci = exp_frame.lineno;
@@ -640,6 +640,7 @@ bool Profiler::thread_in_main(jthread thread)
     }
     else
     {
+      logger->critical("JVMTI::GetThreadInfo returned unhandled JVMTIError. Exiting program.");
       exit(1);
     }
   }
@@ -654,6 +655,7 @@ bool Profiler::thread_in_main(jthread thread)
     }
     else
     {
+      logger->critical("JVMTI::GetThreadGroupInfo returned unhandled JVMTIError. Exiting program.");
       exit(1);
     }
   }
@@ -765,10 +767,11 @@ void Profiler::clearInScopeMethods()
 
 void Profiler::addProgressPoint(jint method_count, jmethodID *methods)
 {
-
+  logger->debug("Within Profiler::addProgressPoint");
   // Only ever set progress point once
   if (end_to_end || ((progress_point->method_id) != nullptr))
   {
+    logger->debug("Progress point has already been set - returning from Profiler::addProgressPoint");
     return;
   }
 
@@ -798,6 +801,8 @@ void Profiler::addProgressPoint(jint method_count, jmethodID *methods)
       }
     }
   }
+  logger->critical("Progress point not set - check that correct line number has been passed on cli. Exiting program");
+  exit(1);
 }
 
 void Profiler::setJNI(JNIEnv *jni)
@@ -957,7 +962,7 @@ struct sigaction SignalHandler::SetAction(
 
 void Profiler::Start()
 {
-  logger->info("Starting profiler...");
+  logger->info("Starting profiler ...");
   action_for_sigprof_ = handler_.SetAction(&Profiler::Handle);
   call_frames.reserve(2000);
   _running = true;

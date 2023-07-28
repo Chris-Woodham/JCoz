@@ -18,8 +18,7 @@ public class Main {
             } catch(InterruptedException exception) {
                 System.out.println("Thread interrupted");
             }
-            System.out.println("End of loop " + iteration + "\n");
-            iteration++;
+            System.out.println("End of loop " + iteration++ + "\n");
         }
     }
 
