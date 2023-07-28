@@ -83,12 +83,12 @@ OBJECTS = $(patsubst $(SRC_DIR)/%,$(BUILD_DIR)/%,$(_OBJECTS))
 $(BUILD_DIR)/%.pic.o: $(SRC_DIR)/%.cc
 	$(CC) $(INCLUDES) $(COPTS) -c $< -o $@
 
-all-18: $(OBJECTS)
+all-18-20: $(OBJECTS)
 	$(CC) $(COPTS) -shared \
 	  -o $(BUILD_DIR)/$(TARGET) \
 	  -Bsymbolic $(OBJECTS) $(LIBS)
 
-all-20+: $(OBJECTS)
+all-22: $(OBJECTS)
 	$(CC) $(COPTS) -shared \
 	  -o $(BUILD_DIR)/$(TARGET) \
 	  -Bsymbolic $(OBJECTS) $(LIBS) \

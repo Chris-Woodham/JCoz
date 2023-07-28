@@ -4,6 +4,10 @@ JCoz is the world's first causal profiler for Java (and eventually all JVM) prog
 
 ## Get Started
 
+### Architecture
+
+Currently the JCoz profiler can only be built on x86 machines (in the future we will work on porting the JCoz profiler to aarch64 platforms).
+
 ### Dependencies
 
 - [spdlog](https://github.com/gabime/spdlog) (`0.11.0` or higher)
@@ -32,13 +36,13 @@ sudo cp -r $path_to_spdlog/include/. /usr/local/include
 Once all the dependencies have been installed, the native agent is built using make
 
 ```sh
-# On Ubuntu 20+
+# On Ubuntu 22
 make clean
-make all-20+
+make all-22
 
-# On Ubuntu 18
+# On Ubuntu 18 and 20
 make clean
-male all-18
+male all-18-20
 ```
 
 This will build a native agent, which can be found in `build-<bits_in_platfrom_architecture>` directory.
@@ -57,22 +61,21 @@ java -agentpath:pathname[=options] Main
 
 ```sh
 cd JCoz/example/src/simple-single-threaded-example
-java -agentpath:$pathToJCoz/JCoz/build-64/liblagent.so=progress-point=LMain:21_pkg=model Main
+javac Main.java
+java -agentpath:$pathToJCoz/JCoz/build-64/liblagent.so=progress-point=LMain:11_pkg=model Main
 ```
+
+This would set a progress point in line 11 of the class `Main` (in [src/simple-single-threaded-example/Main.java](example/src/simple-single-threaded-example/Main.java)) and any code within the `model` directory would be in the scope for profiling (i.e. [model.Help](example/src/simple-single-thread-example/model/Main.java).
 
 2. You can run the Java application in [JCoz/example/src/simple-multi-threaded-example](./example/src/simple-multi-threaded-example/) using only the required options with the following commands
 
 ```sh
 cd JCoz/example/src/simple-multi-threaded-example
-java -agentpath:$pathToJCoz/JCoz/build-64/liblagent.so=progress-point=LMain:11_pkg=model Main
+javac Main.java
+java -agentpath:$pathToJCoz/JCoz/build-64/liblagent.so=progress-point=LMain:21_pkg=model Main
 ```
 
-```sh
-cd JCoz/example/src/simple-multi-threaded-example
-user@ubuntu:~/Jcoz/example/src $ java -agentpath:/path/to/libagent.so=progress-point=Ldummy/Main:11_pkg=dummy dummy/Main
-```
-
-This would set a progress point in line 11 of the class `Main` in the package `dummy` (in [src/dummy/Main.java](example/src/dummy/Main.java)) and any code within `src/dummy` would be in the scope for profiling, i.e. both [dummy.Main](example/src/dummy/Main.java) and [dummy.nested.Help](example/src/dummy/nested/Help.java).
+This would set a progress point in line 21 of the class `Main` (in [src/simple-multi-threaded-example/Main.java](example/src/simple-multi-threaded-example/Main.java)) and any code within the `model` directory would be in the scope for profiling (i.e. [model.FastThread](example/src/simple-multi-threaded-example/model/FastThread.java); [model.SlowThread](example/src/simple-multi-threaded-example/model/SlowThread.java); and [model.Result](example/src/simple-multi-threaded-example/model/Result.java)).
 
 For all the available options, see the [_options_ section below](#cli-options)
 

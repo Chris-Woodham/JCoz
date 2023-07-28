@@ -87,6 +87,7 @@ jthread create_thread(JNIEnv *jni_env)
   jclass cls = jni_env->FindClass("java/lang/Thread");
   if (cls == NULL)
   {
+    logger->critical("Unable to find class java/lang/Thread in jni_env - therefore cannot create profiler thread. Exiting program.\n");
     exit(1);
   }
   const char *method = "<init>";
@@ -94,6 +95,7 @@ jthread create_thread(JNIEnv *jni_env)
 
   if (methodId == NULL)
   {
+    logger->critical("Unable to find init method for class java/lang/Thread in jni_env - therefore cannot create profiler thread. Exiting program.\n");
     exit(1);
   }
 
@@ -149,8 +151,11 @@ bool is_class_fqn_prefix(const char *prefix, char *class_sig)
 
 bool contains_class_fqn_prefix(std::vector<std::string> &elements, char *class_sig)
 {
+  // This predicate is a lambda function passed to std::find_if
   auto predicate = [&class_sig](std::string &scope)
-  { return is_class_fqn_prefix(scope.c_str(), class_sig); };
+  { 
+    return is_class_fqn_prefix(scope.c_str(), class_sig); 
+  };
   return std::find_if(std::begin(elements), std::end(elements), predicate) != std::end(elements);
 }
 
@@ -194,11 +199,26 @@ void CreateJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass)
       Profiler::addInScopeMethods(method_count, methods.Get());
     }
 
-    // TODO: this matches a prefix. class name AA will match a progress
-    //  point set with class A
-    if (strstr(ksig.Get(), prof->getProgressClass().c_str()) == ksig.Get())
+    // Initial check for progress point class
+    // This check matches a prefix. class name AA will match a progress point set with class A 
+    // (i.e. model/DummyClass and newmodel/DummyClass would both match)
+    const char *progress_class_c_str = prof->getProgressClass().c_str(); 
+    std::string klass_sig = std::string(ksig.Get());
+    if (strstr(klass_sig.c_str(), progress_class_c_str) == klass_sig.c_str())
     {
-      prof->addProgressPoint(method_count, methods.Get());
+      logger->info("Setting progress point - initial check for correct class has passed");
+      // The progress_class_c_str is in the format "LMain"
+      // Whereas the klass_sig is in the format "LMain;"
+      // Therefore need to strip the ";" before the second check
+      // Since the initial check will occur hundreds/thousands of times - but the second check should only occur once or twice
+      // Having the second check with the extra step of ";" replacement is slightly more performant than doing the replace earlier
+      // and having a single check
+      klass_sig.replace(klass_sig.length() - 1, 1, "\0");
+      // Second check for progress point class
+      if (klass_sig.compare(progress_class_c_str) == 0) {
+        logger->info("Setting progress point - second check for correct class has passed");
+        prof->addProgressPoint(method_count, methods.Get());
+      } 
     }
   }
   if (releaseLock)
@@ -388,11 +408,12 @@ jvmtiError run_profiler(JNIEnv *jni)
     jclass next_loaded_class = loaded_classes[i];
     JvmtiScopedPtr<char> ksig(jvmti);
     jvmti->GetClassSignature(next_loaded_class, ksig.GetRef(), nullptr);
-    prof->getLogger()->debug("Loading class {}", ksig.Get());
+    prof->getLogger()->debug("Within entry.cc::run_profiler - Loading class {}", ksig.Get());
     CreateJMethodIDsForClass(jvmti, next_loaded_class);
   }
 
   jthread agent_thread = create_thread(jni);
+  prof->getLogger()->debug("Calling jmvti->RunAgentThread ...");
   jvmtiError agent_error = jvmti->RunAgentThread(agent_thread, &Profiler::runAgentThread, nullptr, 1);
   return agent_error;
 }
